@@ -11,15 +11,23 @@
  *         輔助燈 (遙控頻道開關)；遙控斷線時大燈尾燈交替閃；開機 6 盞燈依序自檢。
  *  [網頁] 新增「燈光」分頁 (即時亮度、每路最大亮度、測試、大燈模式)；IR 分頁改為互通狀態。
  *  其餘 (遙控/音效/系統/記錄/診斷報告、RAM 快取、混音輸出) 與 v3.6 相同。
+ * v3.7 -> v3.7.1 (腳位審查)：
+ *  - IR 發射腳 GPIO14 -> GPIO33：GPIO14 係 JTAG 嘅 TMS 腳，開機時有內部上拉；GPIO33 冇開機/JTAG 功能
+ *  - LEDC 頻道重新分配 (燈 0,1,2,4,5,8；IR 載波 7)：無論 channel->timer 對應方式係 (ch/2)%4 定 ch%4，
+ *    38kHz 載波都唔會同 5kHz 燈光共用 timer
+ *  - 新增編譯期腳位檢查：撞腳位 / 用咗 flash、USB 序列埠、開機腳、JTAG 腳 / 輸入專用腳做輸出 /
+ *    電池腳撞其他功能 / LEDC 頻道共用 timer，全部會直接編譯失敗，並講明邊隻腳有問題
+ *  - 診斷報告新增 [腳位] 一行
  * ------------------------------------------------------------
  * 接線摘要：
  *  I2S 功放 MAX98357A : BCLK=GPIO26  LRC(WS)=GPIO25  DIN=GPIO22  VIN=5V  GND=GND  (SD 懸空)
  *  iBUS 接收機        : iBUS 訊號 -> GPIO16 (RX2)   共地
  *  IR 接收頭 (38kHz)  : OUT=GPIO27  VCC=3.3V  GND
- *  IR 發射            : GPIO14 -> 1k -> NPN 基極；集電極 -> IR LED 負極；LED 正極 -> 47~100R -> 5V
- *  燈光 (每路 GPIO -> 220~330R -> LED -> GND；大功率燈請用 NPN/MOSFET 驅動)：
+ *  IR 發射            : GPIO33 -> 1k -> NPN 基極 (基極再加 10k 落 GND)；集電極 -> IR LED 負極；LED 正極 -> 47~100R -> 5V
+ *  燈光：紅/橙/黃 LED 可 GPIO -> 220~330R -> LED -> GND；白/藍 LED (順向電壓約 3V) 同大功率燈要用 NPN/MOSFET 由 5V 驅動
  *    大燈 GPIO4 / 機槍閃光 GPIO18 / 炮口火光 GPIO19 / 尾燈 GPIO21 / 受擊指示 GPIO23 / 輔助燈 GPIO32
- *  (選用) 電池電壓    : 分壓後接 ADC1 腳 (GPIO32~39，注意 GPIO32 已用作輔助燈)
+ *    (GPIO4 唔好加外部上拉)
+ *  (選用) 電池電壓    : 分壓後接 GPIO34 / 35 / 36 / 39 (ADC1 輸入專用腳；GPIO32、33 已用)
  * ------------------------------------------------------------
  * 編譯環境：Arduino-ESP32 2.0.17 (建議)；3.x 可編譯，但 legacy I2S 會有 deprecated 警告
  * 開發板：ESP32 Dev Module / Flash 4MB / Partition Scheme = No OTA (2MB APP/2MB SPIFFS)
@@ -46,7 +54,7 @@
 #endif
 
 // ===================== 基本設定 =====================
-#define FW_VERSION "v3.7"
+#define FW_VERSION "v3.7.1"
 const char* WIFI_SSID     = "Tank_Battle_Sound";
 const char* WIFI_PASSWORD = "12345678";          // 建議自行更改 (>=8 字元)
 
@@ -70,7 +78,7 @@ constexpr int LED_FIRE_PIN      = 19;            // 炮口火光
 constexpr int LED_HIT_PIN       = 23;            // 受擊指示
 constexpr int LED_AUX_PIN       = 32;            // 輔助燈
 constexpr int IR_RECEIVE_PIN    = 27;            // 38kHz 解調接收頭 (低電平=有訊號)；必須 < 32
-constexpr int IR_SEND_PIN       = 14;            // 必須經電晶體驅動 IR LED，唔好直推
+constexpr int IR_SEND_PIN       = 33;            // 必須經電晶體驅動 IR LED，唔好直推 (舊版用 GPIO14：JTAG TMS 腳，開機有上拉)
 static_assert(IR_RECEIVE_PIN < 32, "IR_RECEIVE_PIN must be GPIO0-31 (register read in ISR)");
 
 // --- (選用) 電池電壓偵測：必須用 ADC1 腳 (GPIO32~39)，ADC2 喺 Wi-Fi 啟動後不能用 ---
@@ -84,6 +92,28 @@ constexpr int      BATT_ADC_PIN   = BATT_ADC_PIN_VALUE;   // -1 = 停用
 constexpr float    BATT_DIV_RATIO = 3.0f;
 constexpr uint32_t BATT_LOW_MV    = BATT_LOW_MV_VALUE;
 static_assert(BATT_ADC_PIN < 0 || (BATT_ADC_PIN >= 32 && BATT_ADC_PIN <= 39), "BATT_ADC_PIN must be an ADC1 pin (GPIO32-39)");
+
+// ---- 腳位編譯期檢查：任何改動令腳位撞車、或者用咗唔可用嘅腳位，會直接編譯失敗 (C++11 寫法，Arduino-ESP32 2.0.x 可用) ----
+constexpr int PIN_LIST[] = { IBUS_RX_PIN, IBUS_TX_PIN, I2S_BCLK_PIN, I2S_WS_PIN, I2S_DATA_PIN, LED_HEADLIGHT_PIN, LED_TAIL_PIN,
+                             LED_MG_PIN, LED_FIRE_PIN, LED_HIT_PIN, LED_AUX_PIN, IR_RECEIVE_PIN, IR_SEND_PIN };
+constexpr int PIN_N = (int)(sizeof(PIN_LIST) / sizeof(PIN_LIST[0]));
+constexpr bool pinsAllDifferent(int i, int j) {
+  return i >= PIN_N ? true : (j >= PIN_N ? pinsAllDifferent(i + 1, i + 2) : (PIN_LIST[i] != PIN_LIST[j] && pinsAllDifferent(i, j + 1)));
+}
+constexpr bool pinInList(int p, int i) { return i < PIN_N && (PIN_LIST[i] == p || pinInList(p, i + 1)); }
+constexpr bool pinReserved(int p) {   // 6-11 連 flash；1/3 USB 序列埠；0/2/5/12/15 開機腳；12-15 同時係 JTAG 腳 (13/14 開機有上拉)
+  return (p >= 6 && p <= 11) || p == 1 || p == 3 || p == 0 || p == 2 || p == 5 || p == 12 || p == 13 || p == 14 || p == 15;
+}
+constexpr bool pinOutputOk(int p) { return p >= 0 && p <= 33 && !pinReserved(p); }   // 34~39 只可輸入
+constexpr bool pinInputOk(int p)  { return p >= 0 && p <= 39 && !pinReserved(p); }
+static_assert(pinsAllDifferent(0, 1), "兩個功能用咗同一隻 GPIO (見 PIN_LIST)");
+#define PIN_OUT(p) static_assert(pinOutputOk(p), #p " 唔可以做輸出：GPIO6-11 連 flash、1/3 係 USB 序列埠、0/2/5/12/13/14/15 係開機或 JTAG 腳、34-39 只可輸入")
+#define PIN_IN(p)  static_assert(pinInputOk(p),  #p " 唔可以用：GPIO6-11 連 flash、1/3 係 USB 序列埠、0/2/5/12/13/14/15 係開機或 JTAG 腳")
+PIN_OUT(IBUS_TX_PIN); PIN_OUT(I2S_BCLK_PIN); PIN_OUT(I2S_WS_PIN); PIN_OUT(I2S_DATA_PIN);
+PIN_OUT(LED_HEADLIGHT_PIN); PIN_OUT(LED_TAIL_PIN); PIN_OUT(LED_MG_PIN); PIN_OUT(LED_FIRE_PIN); PIN_OUT(LED_HIT_PIN); PIN_OUT(LED_AUX_PIN);
+PIN_OUT(IR_SEND_PIN);
+PIN_IN(IBUS_RX_PIN); PIN_IN(IR_RECEIVE_PIN);
+static_assert(BATT_ADC_PIN < 0 || !pinInList(BATT_ADC_PIN, 0), "BATT_ADC_PIN 撞咗其他功能嘅腳位 (GPIO32、33 已用，請用 34/35/36/39)");
 
 // --- iBUS 頻道預設對應 (0 起算)；網頁可修改並存入 NVS ---
 constexpr int CH_LEFT   = 0;
@@ -151,7 +181,7 @@ constexpr uint32_t IR_SEQ_GAP_MS      = 50;       // 協議與協議之間嘅空
 constexpr uint32_t IR_SHOT_MAX_MS     = 4500;     // 一發射擊 (全部協議) 最長時間，超出嘅協議唔發
 constexpr uint32_t IR_CARRIER_HZ      = 38000;
 constexpr int      IR_CARRIER_DUTY    = 128;
-constexpr int      IR_LEDC_CH         = 4;        // 僅 2.x：燈光用 LEDC 0,1,2,3,6,7，避開 4/5 (同一個 timer)
+constexpr int      IR_LEDC_CH         = 7;        // 僅 2.x：IR 載波 38kHz 專用；燈光用 0,1,2,4,5,8 (見下面檢查)
 constexpr size_t   IR_RING_SIZE       = 256;
 constexpr int      LRN_MAX            = 6;
 
@@ -402,8 +432,20 @@ volatile uint32_t logSeq = 0;
 portMUX_TYPE logMux = portMUX_INITIALIZER_UNLOCKED;
 
 // --- 燈光 ---
-const int LIGHT_PIN[LT_COUNT] = { LED_HEADLIGHT_PIN, LED_TAIL_PIN, LED_MG_PIN, LED_FIRE_PIN, LED_HIT_PIN, LED_AUX_PIN };
-const int LIGHT_LEDC[LT_COUNT] = { 0, 1, 2, 3, 6, 7 };     // LEDC 頻道 (避開 IR 載波用嘅 4/5)
+constexpr int LIGHT_PIN[LT_COUNT] = { LED_HEADLIGHT_PIN, LED_TAIL_PIN, LED_MG_PIN, LED_FIRE_PIN, LED_HIT_PIN, LED_AUX_PIN };
+// LEDC 頻道 (僅 2.x)：同一個 timer 嘅頻道必須同頻率。唔肯定 channel->timer 對應係 (ch/2)%4 定 ch%4，所以兩種都唔可以撞：
+// 燈 0,1,2,4,5 + 8 (第 2 組)，IR 載波 7；3 同 6 留空，令 7 喺兩種對應下都獨佔一個 timer。
+constexpr int LIGHT_LEDC[LT_COUNT] = { 0, 1, 2, 4, 5, 8 };
+constexpr int ledcTimerA(int ch) { return (ch / 2) % 4; }
+constexpr int ledcTimerB(int ch) { return ch % 4; }
+constexpr bool ledcShare(int a, int b) { return (a / 8) == (b / 8) && (ledcTimerA(a) == ledcTimerA(b) || ledcTimerB(a) == ledcTimerB(b)); }
+constexpr bool lightChOk(int i, int j) {
+  return i >= LT_COUNT ? true : (j >= LT_COUNT ? lightChOk(i + 1, i + 2) : (LIGHT_LEDC[i] != LIGHT_LEDC[j] && lightChOk(i, j + 1)));
+}
+constexpr bool irClearsLights(int i) { return i >= LT_COUNT ? true : (!ledcShare(IR_LEDC_CH, LIGHT_LEDC[i]) && irClearsLights(i + 1)); }
+static_assert(IR_LEDC_CH >= 0 && IR_LEDC_CH <= 15, "IR_LEDC_CH 必須係 0~15");
+static_assert(lightChOk(0, 1), "兩路燈用咗同一個 LEDC 頻道");
+static_assert(irClearsLights(0), "IR 載波 (38kHz) 嘅 LEDC 頻道同燈光 (5kHz) 共用 timer：會令 IR 載波頻率錯誤");
 const char* const LIGHT_NAME[LT_COUNT] = { "大燈", "尾燈 / 煞車燈", "機槍閃光", "炮口火光", "受擊指示", "輔助燈" };
 const float LIGHT_RISE[LT_COUNT] = { 12.f, 255.f, 255.f, 255.f, 255.f, 12.f };   // 每個 block (5.8ms) 最多升幾多
 const float LIGHT_FALL[LT_COUNT] = { 8.f, 6.f, 255.f, 5.f, 255.f, 8.f };
@@ -1697,7 +1739,7 @@ ul.how{margin:6px 0 0;padding-left:18px;font-size:13px;color:#c9d1d9}ul.how li{m
    <li><b>輔助燈</b>：遙控頻道 <span id="l-cha">—</span> 開關。</li>
    <li><b>失控警示</b>：遙控斷線時大燈尾燈交替閃爍。 <b>開機</b>：6 盞燈依序自檢。</li>
   </ul>
-  <div class="mut" style="margin-top:8px">每路 GPIO 串 220~330Ω 電阻接 LED；大功率燈請用 NPN / MOSFET 驅動。亮度已用 PWM + 近似 gamma 校正。</div>
+  <div class="mut" style="margin-top:8px">紅 / 橙 / 黃 LED 可由 GPIO 串 220~330Ω 直接驅動 (約 5~6 mA)；白 / 藍 LED (順向電壓約 3V) 同大功率燈要用 NPN / MOSFET 由 5V 驅動，否則會好暗。亮度已用 PWM + 近似 gamma 校正。</div>
  </div>
 </section>
 
@@ -2363,6 +2405,8 @@ void handleReport() {
   rp(r, "\n[燈光] 大燈模式 %d｜亮度", (int)headMode);
   for (int i = 0; i < LT_COUNT; i++) rp(r, " %u", (unsigned)lightOut[i]);
   r += '\n';
+  rp(r, "[腳位] iBUS RX%d TX%d｜I2S BCLK%d WS%d DIN%d｜IR 收%d 發%d｜燈 大%d 尾%d 槍%d 炮%d 擊%d 輔%d\n", IBUS_RX_PIN, IBUS_TX_PIN, I2S_BCLK_PIN, I2S_WS_PIN, I2S_DATA_PIN,
+     IR_RECEIVE_PIN, IR_SEND_PIN, LED_HEADLIGHT_PIN, LED_TAIL_PIN, LED_MG_PIN, LED_FIRE_PIN, LED_HIT_PIN, LED_AUX_PIN);
   rp(r, "\n[音效] RAM 快取 %u / %u KB\n", (unsigned)(ramCacheBytes / 1024), (unsigned)(RAM_CACHE_BUDGET / 1024));
   for (int i = 0; i < S_COUNT; i++) {
     const SoundMeta& m = soundMeta[i];
