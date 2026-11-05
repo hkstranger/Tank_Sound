@@ -18,6 +18,7 @@
  *  - 新增編譯期腳位檢查：撞腳位 / 用咗 flash、USB 序列埠、開機腳、JTAG 腳 / 輸入專用腳做輸出 /
  *    電池腳撞其他功能 / LEDC 頻道共用 timer，全部會直接編譯失敗，並講明邊隻腳有問題
  *  - 診斷報告新增 [腳位] 一行
+ *  - 網頁換成手機優先版面 (底部分頁、示範模式、連唔到坦克時有說明)
  * ------------------------------------------------------------
  * 接線摘要：
  *  I2S 功放 MAX98357A : BCLK=GPIO26  LRC(WS)=GPIO25  DIN=GPIO22  VIN=5V  GND=GND  (SD 懸空)
@@ -1596,469 +1597,476 @@ static int soundProgress(int snd) {
 
 // ===================== 網頁 (單頁儀表板) =====================
 const char PAGE_HTML[] = R"rawliteral(<!DOCTYPE html>
-<html lang="zh-HK"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="zh-HK"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0c0e">
 <title>坦克儀表板</title>
 <style>
-:root{--bg:#0f1114;--card:#1a1d22;--line:#2c3138;--fg:#e8eaed;--mut:#8b949e;--acc:#ff9800;--ok:#3fb950;--bad:#f85149;--warn:#d29922;--blue:#2f81f7}
+:root{--bg:#0f1114;--card:#1a1d22;--card2:#15181c;--line:#2c3138;--fg:#e8eaed;--mut:#9aa4ae;--acc:#ff9800;--ok:#3fb950;--bad:#f85149;--warn:#d29922;--blue:#2f81f7;--hd:40px;--nav:50px;--navw:64px}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,"Segoe UI","Microsoft JhengHei",sans-serif}
-header{position:sticky;top:0;z-index:5;background:#0a0c0e;border-bottom:1px solid var(--line);padding:8px 10px 0}
-.top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.top b{font-size:16px;color:var(--acc)}
-.pills{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
-.pill{display:inline-block;padding:2px 9px;border-radius:99px;background:#252a31;color:var(--fg);font-size:12px;white-space:nowrap}
-.pill.ok{background:#12351d;color:#7ee787}.pill.bad{background:#4a1a1a;color:#ff9b94}.pill.warn{background:#3d2f0b;color:#f2cc60}.pill.info{background:#10294d;color:#79b8ff}
-nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
-nav button{flex:0 0 auto;background:none;border:0;border-bottom:3px solid transparent;color:var(--mut);padding:8px 13px;font-size:14px;cursor:pointer;border-radius:0}
-nav button.on{color:var(--fg);border-bottom-color:var(--acc)}
-main{padding:10px;max-width:1100px;margin:0 auto}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:10px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:10px;min-width:0}
-.grid .card{margin-bottom:0}
-h3{margin:0 0 8px;font-size:14px;color:var(--acc);font-weight:600}
-.mut{color:var(--mut);font-size:12px}
-.kv{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed #262b31}
-.kv:last-child{border-bottom:0}.kv span:first-child{color:var(--mut)}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.35 system-ui,-apple-system,"Segoe UI","Microsoft JhengHei","PingFang HK",sans-serif;overscroll-behavior-y:contain}
 button,select,input{font:inherit}
-button{background:#30363d;color:#fff;border:0;border-radius:7px;padding:6px 11px;cursor:pointer}
-.btns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-.btns button{background:#1f6feb;color:#fff;padding:8px 12px;font-weight:600}
-.btns button.gry,button.gry{background:#30363d}
-button.red,.btns button.red{background:#da3633}button.grn{background:#238636}button.s{padding:4px 9px;font-size:12px;border-radius:6px}
-select,input[type=number]{background:#0d1014;color:var(--fg);border:1px solid #3a4048;border-radius:6px;padding:5px 7px}
-input[type=range]{width:100%}
-input[type=file]{max-width:170px;font-size:12px;color:var(--mut)}
-.bar{height:9px;background:#262b31;border-radius:5px;overflow:hidden;position:relative}
-.bar i{display:block;height:100%;width:0;background:var(--acc);border-radius:5px;transition:width .25s}
+header{position:sticky;top:0;z-index:6;display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-height:var(--hd);padding:4px 8px;padding-left:max(8px,env(safe-area-inset-left));padding-right:max(8px,env(safe-area-inset-right));padding-top:max(4px,env(safe-area-inset-top));background:#0a0c0e;border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:15px;color:var(--acc);font-weight:700;flex:0 0 auto}
+.chips{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0}
+.chips::-webkit-scrollbar{display:none}
+.pill{display:inline-block;flex:0 0 auto;padding:2px 8px;border-radius:99px;background:#252a31;color:var(--fg);font-size:12px;line-height:1.5;white-space:nowrap}
+.pill.ok{background:#12351d;color:#7ee787}.pill.bad{background:#4a1a1a;color:#ff9b94}.pill.warn{background:#3d2f0b;color:#f2cc60}.pill.info{background:#10294d;color:#79b8ff}
+.ago{font-size:11px;color:var(--mut);flex:0 0 auto}
+body.stale .chips{opacity:.45}body.stale .ago{color:#f2cc60}
+#off{flex:1 0 100%;margin:0 -8px -4px;padding:3px 8px;background:#4a1a1a;color:#ffb3ad;font-size:12px;text-align:center}
+#demoBar{flex:1 0 100%;margin:0 -8px -4px;padding:2px 8px;background:#3d2f0b;color:#f2cc60;font-size:11.5px;text-align:center}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:7;display:grid;grid-template-columns:repeat(7,1fr);background:#0a0c0e;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+nav button{background:none;border:0;border-radius:0;color:var(--mut);height:var(--nav);min-width:0;padding:0 2px;font-size:13px;cursor:pointer;box-shadow:inset 0 2px 0 transparent}
+nav button[aria-selected=true]{color:var(--fg);font-weight:700;box-shadow:inset 0 2px 0 var(--acc)}
+main{max-width:1100px;margin:0 auto;padding:6px 6px calc(var(--nav) + env(safe-area-inset-bottom) + 8px);padding-left:max(6px,env(safe-area-inset-left));padding-right:max(6px,env(safe-area-inset-right))}
+@media (min-width:720px) and (min-height:521px){
+ nav{position:sticky;top:var(--hd);bottom:auto;grid-template-columns:repeat(7,auto);justify-content:start;border-top:0;border-bottom:1px solid var(--line);padding-bottom:0}
+ nav button{padding:0 18px;height:40px;font-size:14px;box-shadow:inset 0 -2px 0 transparent}
+ nav button[aria-selected=true]{box-shadow:inset 0 -2px 0 var(--acc)}
+ main{padding-bottom:16px}
+}
+@media (orientation:landscape) and (max-height:520px){
+ nav{top:var(--hd);bottom:0;right:auto;width:var(--navw);grid-template-columns:1fr;grid-template-rows:repeat(7,1fr);border-top:0;border-right:1px solid var(--line);padding-bottom:0}
+ nav button{height:auto;box-shadow:inset 2px 0 0 transparent}
+ nav button[aria-selected=true]{box-shadow:inset 2px 0 0 var(--acc)}
+ main{margin-left:var(--navw);max-width:none;padding-bottom:8px}
+}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:6px;min-width:0}
+h2{margin:0 0 6px;font-size:12px;color:var(--acc);font-weight:700;letter-spacing:.02em}
+h2.gh{margin:8px 2px 4px}
+p{margin:0}
+.mut{color:var(--mut);font-size:12px}
+.cols{display:grid;gap:0 6px;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));align-items:start}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:5px;margin-bottom:6px}
+.t{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:4px 8px;min-width:0}
+.t.w2{grid-column:span 2}
+.t>span{display:block;font-size:11px;line-height:1.25;color:var(--mut)}
+.t>b{display:block;font-size:13.5px;line-height:1.3;overflow-wrap:anywhere}
+.t>input{width:100%;margin-top:2px;min-height:30px}
+.bar{height:6px;background:#262b31;border-radius:3px;overflow:hidden;margin-top:3px}
+.bar i{display:block;height:100%;width:0;background:var(--acc)}
 .bar.g i{background:var(--ok)}.bar.b i{background:var(--blue)}
-.alert{padding:6px 9px;border-radius:7px;margin:4px 0;font-size:13px;border-left:4px solid}
-.alert.e{background:#3a1717;border-color:var(--bad)}.alert.w{background:#392d0e;border-color:var(--warn)}.alert.i{background:#102640;border-color:var(--blue)}.alert.k{background:#12301b;border-color:var(--ok)}
-.vrow{display:grid;grid-template-columns:92px 1fr;gap:2px 8px;align-items:center;margin:5px 0}
-.vrow .vn{color:var(--mut);font-size:12px}.vrow .vs{font-size:12px;min-height:16px}
-.vrow.on .vn{color:var(--ok)}
-.fnrow{display:grid;grid-template-columns:74px 1fr 62px;gap:8px;align-items:center;margin:5px 0}
-.fnrow .vn{color:var(--mut);font-size:12px}.fnrow b{text-align:right;font-variant-numeric:tabular-nums;font-size:12px}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{color:var(--mut);font-weight:500;text-align:left;padding:4px 4px;border-bottom:1px solid var(--line);font-size:12px}
-td{padding:4px 4px;border-bottom:1px solid #21262c;vertical-align:middle}
-td.n{font-variant-numeric:tabular-nums;text-align:right}
-.scroll{overflow-x:auto}
-.rbar{position:relative;height:14px;background:#262b31;border-radius:4px;min-width:90px}
-.rbar i{position:absolute;left:0;top:0;bottom:0;background:var(--acc);border-radius:4px;width:0}
-.rbar u{position:absolute;top:-2px;bottom:-2px;width:2px;background:#fff8;text-decoration:none}
-.rbar s{position:absolute;top:0;bottom:0;width:1px;background:#6e768166}
-.srow{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin:8px 0;background:#15181c}
-.srow.bad{border-color:#7d2b28}
-.s-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.s-info{margin:4px 0;font-size:12px;color:var(--mut)}
-.s-act{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px}
-.bar.up{height:5px;margin-top:5px}
-.lamp{width:22px;height:22px;border-radius:50%;background:#222;border:1px solid #444;flex:0 0 22px;transition:background .15s,box-shadow .15s}
-.lrowl{display:grid;grid-template-columns:22px 1fr;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed #262b31}
-.lrowl:last-child{border-bottom:0}
-.lctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px}
-.lctl input[type=range]{flex:1;min-width:110px;width:auto}
-canvas{width:100%;height:auto;background:#0b0d0f;border:1px solid var(--line);border-radius:8px;display:block}
-pre,textarea{width:100%;background:#0b0d0f;color:#c9d1d9;border:1px solid var(--line);border-radius:8px;padding:8px;font:12px/1.4 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-all}
-textarea{height:260px}
-.lrow{display:grid;grid-template-columns:78px 1fr;gap:8px;padding:3px 0;border-bottom:1px solid #20252b;font-size:13px}
-.lrow time{color:var(--mut);font:12px ui-monospace,Consolas,monospace}
-.mapgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
-.mapgrid label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mut)}
-#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#30363d;color:#fff;padding:8px 14px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;max-width:90vw}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0}
+.grow{flex:1}
+button,.btn{background:#30363d;color:#fff;border:0;border-radius:8px;padding:6px 12px;min-height:36px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:4px}
+button.p,.btn.p{background:#1f6feb}button.red{background:#da3633}button.grn{background:#238636}button.gry{background:#30363d}
+button:disabled{opacity:.5}
+select,input[type=number]{background:#0d1014;color:var(--fg);border:1px solid #3a4048;border-radius:6px;padding:4px 7px;min-height:34px;min-width:0}
+input[type=range]{width:100%;height:34px;margin:0}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible,label.btn:focus-within,a:focus-visible{outline:2px solid #79b8ff;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+label.btn{position:relative}
+summary{cursor:pointer;color:var(--fg);padding:4px 0;min-height:32px;list-style:none;display:flex;align-items:center;gap:6px;font-weight:600}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'▸';color:var(--acc);display:inline-block;transition:transform .15s}
+details[open]>summary::before{transform:rotate(90deg)}
+details{margin:4px 0}
+.alert{padding:5px 8px;border-radius:7px;margin:0 0 5px;font-size:13px;border-left:4px solid}
+.alert.e{background:#3a1717;border-color:var(--bad)}.alert.w{background:#392d0e;border-color:var(--warn)}.alert.i{background:#102640;border-color:var(--blue)}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.acts button{min-height:48px;font-weight:700;font-size:14px;padding:6px 4px}
+.vol{display:flex;align-items:center;gap:8px;margin-top:4px}.vol>span{color:var(--mut);font-size:12px;white-space:nowrap;flex:0 0 auto}.vol>b{min-width:36px;text-align:right;font-size:13px}
+.gs{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:6px 8px}
+.g .gl{display:flex;justify-content:space-between;gap:4px;font-size:11.5px}.g .gl span{color:var(--mut);white-space:nowrap}.g .gl b{font-size:12px;white-space:nowrap}
+.vcs{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.vc{padding:2px 9px;border-radius:99px;font-size:12px;background-color:#252a31;color:var(--mut);border:1px solid #2f353c;background-image:linear-gradient(90deg,rgba(63,185,80,.5) var(--p,0%),transparent var(--p,0%))}
+.vc.on{color:#fff;border-color:#2e7d3a}
+.lamps{display:flex;justify-content:space-around;gap:4px}.lm{text-align:center;font-size:11px;color:var(--mut);min-width:40px}
+.lamp{width:22px;height:22px;border-radius:50%;background:#222;border:1px solid #444;margin:0 auto 2px;transition:background .15s,box-shadow .15s}
+.chs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(150px,100%),1fr));gap:5px 8px}
+.ch .cl{display:flex;justify-content:space-between;gap:4px;font-size:12px;line-height:1.3}.ch .cl em{font-style:normal;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.ch .cl b{font-variant-numeric:tabular-nums}
+.rb{position:relative;height:9px;background:#262b31;border-radius:3px;margin-top:2px}
+.rb i{position:absolute;left:0;top:0;bottom:0;background:var(--acc);border-radius:3px;width:0}
+.rb u{position:absolute;top:-2px;bottom:-2px;width:2px;background:#fff8}
+.rb s{position:absolute;top:0;bottom:0;left:50%;width:1px;background:#6e768188}
+.mm{font-size:11px;line-height:1.2;color:var(--mut);text-align:right;font-variant-numeric:tabular-nums}
+.mapgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(140px,100%),1fr));gap:6px}.mapgrid label{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--mut)}
+.lr{display:grid;grid-template-columns:24px 1fr auto;gap:0 10px;align-items:center;padding:5px 0;border-bottom:1px dashed #262b31}.lr:last-child{border-bottom:0}
+.lr .lamp{margin:0}.lr .ln{min-width:0}.lr .ln b{font-size:13.5px}.lr .sl{grid-column:2/4;display:flex;align-items:center;gap:8px}.lr .sl>span{white-space:nowrap}.lr .sl b{min-width:38px;text-align:right;font-size:13px}
+ul.how{margin:4px 0 0;padding-left:18px;font-size:13px;color:#c9d1d9}ul.how li{margin:3px 0}
+.sd{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 8px;margin-bottom:5px}.sd.bad{border-color:#7d2b28}
+.sd .s1{display:flex;align-items:center;gap:5px}.sd .s1 b{font-size:13.5px;white-space:nowrap}.sd .s1 .pill{min-width:0;overflow:hidden;text-overflow:ellipsis;max-width:42%}
+.sd .s1 button,.sd .s1 .btn{padding:4px 8px;min-width:44px;font-size:13px}
+.sd .si{font-size:12px;color:var(--mut);margin-top:2px;overflow-wrap:anywhere}
+.pbar{height:3px;background:#262b31;border-radius:2px;overflow:hidden;margin-top:4px}.pbar i{display:block;height:100%;width:0;background:var(--ok)}.pbar.up i{background:var(--blue)}
+.pr{background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:5px 8px;margin-bottom:5px}.pr1{display:flex;align-items:center;gap:6px}.pr1 b{font-size:13.5px}.pr1 .al2{font-size:11px;color:var(--mut)}.pr1 button{padding:4px 10px;min-width:44px}
+.pr2{font-size:12px;color:var(--mut);margin-top:2px;font-variant-numeric:tabular-nums}.pr.off .pr2{display:none}
+canvas{display:block;width:100%;height:150px;background:#0b0d0f;border:1px solid var(--line);border-radius:8px}
+pre,textarea{width:100%;background:#0b0d0f;color:#c9d1d9;border:1px solid var(--line);border-radius:8px;padding:6px;font:12px/1.4 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-all;margin:4px 0 0}
+textarea{height:200px}
+.lg{display:grid;grid-template-columns:64px 1fr;gap:8px;padding:3px 0;border-bottom:1px solid #20252b;font-size:12.5px}.lg time{color:var(--mut);font:11.5px ui-monospace,Consolas,monospace}
+#toast{position:fixed;left:50%;bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 10px);transform:translateX(-50%);background:#30363d;color:#fff;padding:8px 14px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;max-width:90vw;text-align:center}
 #toast.on{opacity:1}
-.row2{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:6px 0}
-ul.how{margin:6px 0 0;padding-left:18px;font-size:13px;color:#c9d1d9}ul.how li{margin:3px 0}
+@media (min-width:720px) and (min-height:521px){#toast{bottom:18px}}
+@media (orientation:landscape) and (max-height:520px){#toast{bottom:12px;left:calc(50% + var(--navw)/2)}}
+@media (max-width:719px) and (orientation:portrait){.acts button{min-height:max(48px,8vh)}}
+@media (min-width:640px){#lt-list,#wav-list,#pf-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(310px,100%),1fr));gap:0 10px;align-items:start}.sd,.pr{margin-bottom:6px}}
+@media (pointer:coarse){button,.btn,select,input[type=number],summary{min-height:44px}input[type=range]{height:44px}.t>input{min-height:44px}nav button{min-height:var(--nav);min-width:44px}}
 </style></head><body>
 <header>
- <div class="top"><b>坦克聲光 + IR</b><span id="fw" class="mut"></span><span id="off" class="pill bad" hidden>連線中斷，重試中…</span></div>
- <div class="pills"><span id="h-link" class="pill">遙控 —</span><span id="h-eng" class="pill">引擎 —</span><span id="h-ir" class="pill">IR —</span><span id="h-al" class="pill">警示 —</span></div>
- <nav id="tabs"></nav>
+ <h1>坦克</h1>
+ <div class="chips"><span id="h-link" class="pill">遙控 —</span><span id="h-eng" class="pill">—</span><span id="h-ir" class="pill">IR —</span><span id="h-al" class="pill">—</span></div>
+ <span id="ago" class="ago" aria-hidden="true"></span>
+ <div id="demoBar" hidden>示範數據：而家睇到嘅唔係真實坦克，所有掣只會改示範數值</div>
+ <div id="off" role="alert" hidden>連線中斷，重試中…</div>
 </header>
-<main>
+<div id="noconn" class="card" role="alert" hidden style="margin:10px 6px"><h2>連唔到坦克</h2>
+ <p style="margin:4px 0 8px">呢個頁面要由坦克本身提供數據。請：</p>
+ <ol style="margin:0 0 8px;padding-left:20px"><li>用手機連上坦克嘅 Wi-Fi</li><li>喺瀏覽器打開坦克位址 (預設 <b>http://192.168.4.1</b>)</li></ol>
+ <p class="mut" style="margin:0 0 8px">只想睇吓版面？可以用示範數據：</p><a class="btn p" href="?demo" style="text-decoration:none;color:#fff">打開示範模式</a></div>
+<nav id="tabs"></nav>
+<main id="main">
 
 <section id="t-ov" class="tab">
- <div class="card"><h3>警示 / 健康檢查</h3><div id="al-list"></div></div>
- <div class="grid">
-  <div class="card"><h3>快速操作</h3>
-   <div class="btns"><button onclick="act('/ignition')">點火 / 熄匙</button><button class="red" onclick="act('/fire')">測試開炮 (聲+IR+燈)</button><button class="gry" onclick="act('/simhit')">模擬被擊中</button></div>
-   <div class="kv"><span>音量</span><b id="vol-v">—</b></div><input type="range" id="vol" min="0" max="100">
+ <div id="al-list" hidden></div>
+ <div class="cols">
+  <div>
+   <div class="card"><div class="acts">
+     <button class="p" onclick="act('/ignition',null,'已送出：點火 / 熄匙')">點火/熄匙</button>
+     <button class="red" onclick="act('/fire',null,'已發出開炮指令 (聲 + IR + 燈)')">測試開炮</button>
+     <button class="gry" onclick="act('/simhit',null,'已模擬被擊中')">模擬被擊中</button></div>
+    <div class="vol"><span>音量</span><input type="range" id="vol" min="0" max="100" aria-label="音量"><b id="vol-v">—</b></div></div>
+   <div class="card"><div class="gs">
+     <div class="g"><div class="gl"><span>引擎</span><b id="o-eng">—</b></div></div>
+     <div class="g"><div class="gl"><span>音調</span><b id="o-pit">—</b></div><div class="bar"><i id="o-pitb"></i></div></div>
+     <div class="g"><div class="gl"><span>油門負載</span><b id="o-ld">—</b></div><div class="bar b"><i id="o-ldb"></i></div></div></div>
+    <div class="vcs" id="o-vo" aria-label="目前播放中嘅聲道"></div></div>
   </div>
-  <div class="card"><h3>引擎</h3>
-   <div class="kv"><span>狀態</span><b id="o-eng">—</b></div>
-   <div class="kv"><span>播放速度 (音調)</span><b id="o-pit">—</b></div><div class="bar"><i id="o-pitb"></i></div>
-   <div class="kv"><span>油門負載</span><b id="o-ld">—</b></div><div class="bar b"><i id="o-ldb"></i></div>
-  </div>
-  <div class="card"><h3>聲道 (同時播放)</h3><div id="o-vo"></div></div>
-  <div class="card"><h3>遙控 → 功能</h3><div id="o-fn"></div></div>
-  <div class="card"><h3>燈光</h3><div id="o-lt" style="display:flex;gap:14px;flex-wrap:wrap"></div></div>
-  <div class="card"><h3>IR 互通</h3>
-   <div class="kv"><span>發射序列</span><b id="o-pr">—</b></div>
-   <div class="kv"><span>發射次數 / 最後</span><b id="o-tx">—</b></div>
-   <div class="kv"><span>被擊中次數 / 最後</span><b id="o-hit">—</b></div>
-  </div>
-  <div class="card"><h3>系統</h3>
-   <div class="kv"><span>運行時間</span><b id="o-up">—</b></div>
-   <div class="kv"><span>可用記憶體</span><b id="o-heap">—</b></div>
-   <div class="kv"><span>音訊處理負載</span><b id="o-aload">—</b></div>
-   <div class="kv"><span>Flash 讀取</span><b id="o-fr">—</b></div>
+  <div>
+   <div class="card"><h2>遙控功能</h2><div class="gs" id="o-fn"></div></div>
+   <div class="card"><h2>燈光</h2><div class="lamps" id="o-lt"></div></div>
   </div>
  </div>
+ <div class="tiles" id="o-tiles"></div>
 </section>
 
 <section id="t-rc" class="tab" hidden>
- <div class="card"><h3>iBUS 連線</h3>
-  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">
-   <div><div class="mut">狀態</div><b id="r-link">—</b></div><div><div class="mut">幀率</div><b id="r-hz">—</b></div>
-   <div><div class="mut">最後一幀</div><b id="r-age">—</b></div><div><div class="mut">有效幀總數</div><b id="r-fr">—</b></div>
-   <div><div class="mut">校驗錯誤</div><b id="r-bs">—</b></div><div><div class="mut">數值超出範圍</div><b id="r-br">—</b></div>
-   <div><div class="mut">丟棄位元組</div><b id="r-dr">—</b></div><div><div class="mut">訊號中斷次數</div><b id="r-fo">—</b></div>
-   <div><div class="mut">最大幀間隔</div><b id="r-gap">—</b></div>
-  </div>
-  <div class="row2"><button class="s gry" onclick="act('/rcreset',()=>poll())">重設最小/最大值</button><span class="mut">白線 = 本次開機以來嘅最小/最大值 (可用嚟檢查搖桿行程同中位)</span></div>
- </div>
- <div class="card"><h3>全部 14 個頻道</h3><div class="scroll"><table><thead><tr><th>CH</th><th>功能</th><th style="width:44%">數值</th><th>讀數</th><th>最小~最大</th></tr></thead><tbody id="rc-body"></tbody></table></div></div>
- <div class="card"><h3>頻道功能對應</h3><div class="mut" style="margin-bottom:6px">揀每個功能用邊個頻道 (儲存喺 ESP32，重啟後保留)。大燈：2 段掣 = 關 / 遠光，3 段掣 = 關 / 近光 / 遠光。</div>
+ <div class="tiles" id="rc-tiles"></div>
+ <div class="row"><button class="gry" onclick="act('/rcreset',()=>poll(),'已重設最小/最大值')">重設最小/最大值</button><span class="mut">白線 = 開機以來嘅最小 / 最大值</span></div>
+ <div class="card"><h2>全部 14 個頻道</h2><div class="chs" id="rc-body"></div></div>
+ <details class="card"><summary>頻道功能對應 <span class="mut">(撳開修改)</span></summary><div class="mut" style="margin:2px 0 6px">大燈：2 段掣 = 關 / 遠光，3 段掣 = 關 / 近光 / 遠光</div>
   <div class="mapgrid" id="map-grid"></div>
-  <div class="row2"><button class="s gry" onclick="act('/mapreset',()=>{loadCfg();poll()})">還原預設對應</button></div></div>
+  <div class="row"><button class="gry" onclick="act('/mapreset',()=>{loadCfg();poll()},'已還原預設對應')">還原預設對應</button></div></details>
 </section>
 
 <section id="t-lt" class="tab" hidden>
- <div class="card"><h3>燈光系統</h3>
-  <div class="row2"><label>大燈模式 <select id="l-hm"><option value="0">跟遙控頻道</option><option value="1">強制關</option><option value="2">強制近光</option><option value="3">強制遠光</option></select></label>
-   <span class="mut">網頁強制模式優先於遙控 (測試接線時好用)</span></div>
-  <div id="lt-list"></div>
- </div>
- <div class="card"><h3>燈光行為</h3>
-  <ul class="how">
-   <li><b>大燈</b>：遙控頻道 <span id="l-chh">—</span> 控制 (關 / 近光 / 遠光)，漸亮漸暗。</li>
-   <li><b>尾燈</b>：大燈開啟時微亮；放開搖桿 (煞車) 時全亮 0.8 秒。</li>
-   <li><b>機槍閃光</b>：機槍掣按住時高速閃爍。 <b>炮口火光</b>：開炮瞬間全亮再漸暗。</li>
-   <li><b>受擊指示</b>：被 IR 擊中閃爍 1.5 秒，同時大燈尾燈閃爍 1.2 秒 (損壞效果)。</li>
-   <li><b>輔助燈</b>：遙控頻道 <span id="l-cha">—</span> 開關。</li>
-   <li><b>失控警示</b>：遙控斷線時大燈尾燈交替閃爍。 <b>開機</b>：6 盞燈依序自檢。</li>
-  </ul>
-  <div class="mut" style="margin-top:8px">紅 / 橙 / 黃 LED 可由 GPIO 串 220~330Ω 直接驅動 (約 5~6 mA)；白 / 藍 LED (順向電壓約 3V) 同大功率燈要用 NPN / MOSFET 由 5V 驅動，否則會好暗。亮度已用 PWM + 近似 gamma 校正。</div>
- </div>
+ <div class="card"><div class="row" style="margin-top:0"><label for="l-hm" style="color:var(--mut);font-size:12px">大燈模式</label>
+   <select id="l-hm" class="grow"><option value="0">跟遙控頻道</option><option value="1">強制關</option><option value="2">強制近光</option><option value="3">強制遠光</option></select></div>
+  <div id="lt-list"></div></div>
+ <details class="card"><summary>燈光行為說明 <span class="mut">(撳開睇)</span></summary><ul class="how">
+   <li><b>大燈</b>：遙控頻道 <span id="l-chh">—</span>，漸亮漸暗。<b>尾燈</b>：大燈開時微亮，放開搖桿 (煞車) 全亮 0.8 秒。</li>
+   <li><b>機槍閃光</b>：按住機槍掣時閃爍。<b>炮口火光</b>：開炮瞬間全亮再漸暗。</li>
+   <li><b>受擊指示</b>：被 IR 擊中閃 1.5 秒，大燈尾燈同時閃 1.2 秒。<b>輔助燈</b>：遙控頻道 <span id="l-cha">—</span>。</li>
+   <li><b>失控警示</b>：遙控斷線時大燈尾燈交替閃。<b>開機</b>：6 盞燈依序自檢。</li></ul>
+  <div class="mut" style="margin-top:6px">紅 / 橙 / 黃 LED 可由 GPIO 串 220~330Ω 直接驅動；白 / 藍 LED 同大功率燈要用 NPN / MOSFET 由 5V 驅動，否則會好暗。</div></details>
 </section>
 
 <section id="t-wav" class="tab" hidden>
- <div class="card"><h3>儲存 / 讀取狀態</h3>
-  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))">
-   <div><div class="mut">音效 RAM 快取</div><b id="w-cache">—</b><div class="bar g"><i id="w-cacheb"></i></div></div>
-   <div><div class="mut">檔案空間</div><b id="w-fs">—</b><div class="bar b"><i id="w-fsb"></i></div></div>
-   <div><div class="mut">Flash 讀取 (串流播放)</div><b id="w-fr">—</b></div>
-   <div><div class="mut">最後一次上載</div><b id="w-up">—</b></div>
-  </div></div>
+ <div class="tiles" id="wav-tiles"></div>
  <div id="wav-list"></div>
- <div class="mut">格式要求：WAV / PCM / 單聲道 / 16-bit / 22050 Hz。上載失敗會保留舊檔。</div>
+ <div class="mut">格式：WAV / PCM / 單聲道 / 16-bit / 22050 Hz。上載失敗會保留舊檔。</div>
 </section>
 
 <section id="t-ir" class="tab" hidden>
- <div class="grid">
-  <div class="card"><h3>互通模式</h3>
-   <div class="mut" style="margin-bottom:6px">唔使揀協議：接收會同時比對所有已設定協議；開炮會依序發射所有波形唔同嘅協議 (相同波形只發一次)。</div>
-   <div class="kv"><span>發射序列</span><b id="i-seq">—</b></div>
-   <div class="kv"><span>一發射擊總時間</span><b id="i-sm">—</b></div>
-   <div class="row2"><label>脈衝補償 (µs) <input type="number" id="i-tune" min="0" max="200" step="5" style="width:80px"></label></div>
-   <div class="kv"><span>學習狀態</span><b id="i-ls">—</b></div>
-  </div>
-  <div class="card"><h3>發射 (TX)</h3>
-   <div class="kv"><span>已發射 / 請求 / 略過</span><b id="i-tx">—</b></div>
-   <div class="kv"><span>最後發射</span><b id="i-txa">—</b></div>
-   <div class="kv"><span>裝填倒數</span><b id="i-rl">—</b></div>
-   <div class="kv"><span>開炮掣 / 被擋</span><b id="i-fe">—</b></div>
-  </div>
-  <div class="card"><h3>接收 (RX)</h3>
-   <div class="kv"><span>見到嘅幀 / 命中樣板</span><b id="i-se">—</b></div>
-   <div class="kv"><span>被擊中次數</span><b id="i-hi">—</b></div>
-   <div class="kv"><span>最後被擊中</span><b id="i-ha">—</b></div>
-   <div class="kv"><span>連續命中幀 / 鎖定</span><b id="i-mc">—</b></div>
-   <div class="kv"><span>環境 IR 雜訊</span><b id="i-ep">—</b></div>
-   <div class="kv"><span>ISR 邊緣總數 / 丟失</span><b id="i-ed">—</b></div>
-   <div class="alert w" id="i-hint" hidden></div>
-  </div>
- </div>
- <div class="card"><h3>協議樣板 (全部同時啟用)</h3><div class="scroll"><table><thead><tr><th>協議</th><th>狀態</th><th>元素</th><th>重複</th><th>週期</th><th>發射時間</th><th>已發射</th><th>收到幀</th><th>命中</th><th></th></tr></thead><tbody id="pf-body"></tbody></table></div></div>
- <div class="card"><h3>波形對比 (最後收到嘅一幀 vs 序列第一個協議樣板)</h3>
-  <canvas id="scope" width="900" height="190"></canvas>
-  <div class="mut" id="i-lf" style="margin-top:6px">—</div>
-  <div class="mut" style="margin-top:4px">灰色虛線 = 樣板；彩色 = 實際收到 (綠 = 命中、紅 = 未識別、藍 = 學習中)。</div>
-  <div class="row2"><b>最後一個未識別訊號</b> <span class="mut" id="i-ukm">—</span></div><pre id="i-uk">—</pre>
- </div>
+ <div class="alert w" id="i-hint" hidden></div>
+ <h2 class="gh">互通 (唔使揀協議：全部協議同時接收，開炮依序發射)</h2><div class="tiles" id="ir-t1"></div>
+ <h2 class="gh">發射 / 接收</h2><div class="tiles" id="ir-t2"></div>
+ <h2 class="gh">協議 (全部同時啟用)</h2><div id="pf-body"></div>
+ <div class="card"><h2>波形對比：最後收到嘅一幀 vs 序列第一個樣板</h2><canvas id="scope" role="img" aria-label="IR 波形對比圖"></canvas>
+  <div class="mut" id="i-lf" style="margin-top:4px">—</div>
+  <details><summary>最後一個未識別訊號 <span class="mut" id="i-ukm">(撳開睇)</span></summary><pre id="i-uk">—</pre></details></div>
 </section>
 
 <section id="t-sys" class="tab" hidden>
- <div class="grid">
-  <div class="card"><h3>裝置</h3>
-   <div class="kv"><span>韌體</span><b id="s-fw">—</b></div><div class="kv"><span>晶片</span><b id="s-chip">—</b></div>
-   <div class="kv"><span>CPU / Flash</span><b id="s-cpu">—</b></div><div class="kv"><span>SDK</span><b id="s-sdk">—</b></div>
-   <div class="kv"><span>運行時間</span><b id="s-up">—</b></div><div class="kv"><span>上次重啟原因</span><b id="s-rst">—</b></div>
-  </div>
-  <div class="card"><h3>記憶體</h3>
-   <div class="kv"><span>可用</span><b id="s-hp">—</b></div><div class="kv"><span>歷來最低</span><b id="s-hm">—</b></div>
-   <div class="kv"><span>最大連續區塊</span><b id="s-hx">—</b></div><div class="kv"><span>音效 RAM 快取</span><b id="s-cu">—</b></div>
-   <div class="kv"><span>檔案空間</span><b id="s-fs">—</b></div>
-  </div>
-  <div class="card"><h3>音訊處理</h3>
-   <div class="kv"><span>負載 (平均 / block 時長)</span><b id="s-ld">—</b></div><div class="bar"><i id="s-ldb"></i></div>
-   <div class="kv"><span>每個 block 平均</span><b id="s-av">—</b></div><div class="kv"><span>最近 1 秒最大</span><b id="s-wn">—</b></div>
-   <div class="kv"><span>開機以來最大</span><b id="s-mx">—</b></div><div class="kv"><span>偏慢次數 (&gt;<span id="s-th">20</span> ms)</span><b id="s-sl">—</b></div>
-   <div class="kv"><span>處理過嘅 block</span><b id="s-bk">—</b></div>
-  </div>
-  <div class="card"><h3>任務堆疊餘量 (bytes)</h3>
-   <div class="kv"><span>音訊/控制 (10240)</span><b id="s-ska">—</b></div><div class="kv"><span>IR 發射 (3072)</span><b id="s-ski">—</b></div>
-   <div class="kv"><span>網頁 loop</span><b id="s-skl">—</b></div>
-   <div class="mut">數值愈細愈危險；少於 ~1000 要留意。</div>
-  </div>
-  <div class="card"><h3>Wi-Fi</h3>
-   <div class="kv"><span>SSID</span><b id="s-ssid">—</b></div><div class="kv"><span>位址 / 頻道</span><b id="s-ip">—</b></div>
-   <div class="kv"><span>已連線裝置</span><b id="s-ws">—</b></div><div class="kv"><span>網頁請求總數</span><b id="s-rq">—</b></div>
-  </div>
-  <div class="card" id="s-battc"><h3>電池</h3><div class="kv"><span>電壓</span><b id="s-batt">—</b></div></div>
- </div>
- <div class="card"><h3>工具</h3>
-  <div class="btns"><button onclick="report()">複製診斷報告</button><button class="gry" onclick="if(confirm('重設全部統計？'))act('/statsreset',()=>poll())">重設統計</button><button class="red" onclick="if(confirm('確定重啟 ESP32？'))reboot()">重啟 ESP32</button></div>
-  <div class="mut">「診斷報告」包含遙控、燈光、音效、IR、記憶體同最近事件，貼俾我就可以直接分析。</div>
-  <textarea id="rep" hidden readonly></textarea>
- </div>
+ <div id="sys-groups"></div>
+ <div class="card"><h2>工具</h2><div class="row"><button class="p" onclick="report()">複製診斷報告</button>
+   <button class="gry" onclick="if(confirm('重設全部統計？'))act('/statsreset',()=>poll(),'已重設統計')">重設統計</button>
+   <button class="red" onclick="if(confirm('確定重啟 ESP32？'))reboot()">重啟 ESP32</button></div>
+  <div class="mut">「診斷報告」包含遙控、燈光、音效、IR、記憶體同最近事件，貼俾我就可以直接分析。</div><textarea id="rep" hidden readonly aria-label="診斷報告"></textarea></div>
 </section>
 
 <section id="t-log" class="tab" hidden>
- <div class="card"><h3>事件記錄 <span class="mut">(最新喺上面，最多 48 條)</span></h3>
-  <div class="row2"><button class="s gry" onclick="clearLog()">清除畫面</button></div>
-  <div id="log-body"></div></div>
+ <div class="card"><div class="row" style="margin-top:0"><h2 style="margin:0">事件記錄 <span class="mut">(最新喺上面)</span></h2><span class="grow"></span><button class="gry" onclick="clearLog()">清除畫面</button></div><div id="log-body"></div></div>
 </section>
-
 </main>
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
 const E=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ENG=['熄火','點火中','運行中','熄匙中'],VNAME=['點火/熄匙','主炮','受擊','機槍','炮塔','升降'];
+const ENG=['熄火','點火中','運行中','熄匙中'],VN=['點火/熄匙','主炮','受擊','機槍','炮塔','升降','引擎'];
 const LS=['—','等待開火…','錄取中…','學習成功','學習失敗'];
 const TABS=[['ov','總覽'],['rc','遙控'],['lt','燈光'],['wav','音效'],['ir','IR'],['sys','系統'],['log','記錄']];
-const LCOL=['#fff3c4','#ff4a3d','#ffd166','#ff8a3d','#ff2e2e','#7fd1ff'];
+const LCOL=['#fff3c4','#ff4a3d','#ffd166','#ff8a3d','#ff2e2e','#7fd1ff'],LSHORT=['大燈','尾燈','機槍','炮口','受擊','輔助'];
 const AL=[[0,'e','遙控無訊號：檢查 iBUS 接線、接收機同發射機'],[1,'w','有音效檔缺少 (見「音效」分頁)'],[2,'e','有音效檔格式錯誤 (見「音效」分頁)'],
  [3,'e','可用記憶體偏低'],[4,'w','最近 60 秒內音訊處理偏慢 (可能卡頓或爆音)'],[5,'e','上次重啟原因：欠壓 (Brownout)，請檢查電源 / UBEC / 電容'],
  [6,'w','冇任何可發射嘅 IR 協議 (請「學習」或重設 Tamiya)'],[7,'i','環境 IR 雜訊偏高 (強光或其他紅外線，可能影響命中判定)'],[8,'e','電池電壓偏低'],
  [9,'w','檔案空間接近滿 (>90%)'],[10,'w','任務堆疊餘量偏低'],[11,'e','上次重啟原因：程式崩潰 / 看門狗 (亦可能係欠壓)'],[12,'w','遙控資料錯誤偏多 (干擾或接線問題)']];
-let cur='ov',cfg=null,live=null,logSeq=0,busy=false,fails=0,timer=0;
-const q=async u=>{const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw new Error(u+' '+r.status);return r.json()};
-function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2400)}
-function act(u,after){return fetch(u,{cache:'no-store'}).then(r=>r.text()).then(t=>{if(after)after(t);return t}).catch(()=>toast('請求失敗'))}
+
+/* ======== 示範模式：直接開檔案 (file://) 或網址加 ?demo 時，用內置示範數據，唔使連坦克 ======== */
+const DEMO=location.protocol==='file:'||/[?&]demo(=|&|$)/.test(location.search);
+const DS={vol:80,tune:60,hm:0,map:[0,1,2,3,4,5,6,7],lp:[100,100,100,100,100,100],hits:2,tx:5,t0:Date.now(),alerts:0};
+const dnow=()=>(Date.now()-DS.t0)/1000;
+const dch=i=>{const t=dnow();if(i===4)return(t%6)<0.4?2000:1000;if(i===5){const m=t%11;return m>7&&m<9?2000:1000}if(i===6)return 1500;if(i===7)return 1000;return Math.round(1500+400*Math.sin(t*(0.6+0.13*i)+i))};
+const DN={fn:["左履帶","右履帶","炮塔","炮管升降","主炮","機槍","大燈","輔助燈"],pn:["Tamiya","Tamiya2Shot","TaigenV1","TaigenV2V3","HengLong"],
+ snd:[["engine","引擎 Loop"],["start","點火"],["stop","熄匙"],["fire","主炮"],["mg","機槍"],["turret","炮塔"],["elev","升降"],["hit","受擊"]],lt:[["大燈",4],["尾燈 / 煞車燈",21],["機槍閃光",18],["炮口火光",19],["受擊指示",23],["輔助燈",32]]};
+function demoData(u){
+ const [p,qs]=u.split('?'),P=new URLSearchParams(qs||''),t=dnow(),chs=Array.from({length:14},(_,i)=>dch(i));
+ if(p==='/api/cfg')return{vol:DS.vol,tune:DS.tune,hm:DS.hm,map:DS.map,fn:DN.fn,pn:DN.pn,snd:DN.snd.map(a=>({n:a[0],l:a[1]})),lights:DN.lt.map((a,i)=>({n:a[0],pin:a[1],pct:DS.lp[i]})),fw:'示範'};
+ if(p==='/api/live')return{up:Math.floor(t)+1200,eng:2,link:1,hz:176,pit:Math.round(1000+600*Math.sin(t)),ld:Math.round(250+200*Math.sin(t*.7)),vol:DS.vol,ch:chs,map:DS.map,fs:(chs[4]>1500?1:0)|(chs[5]>1500?2:0),
+  vo:[[-1,0,0],[(t%6)<1?3:-1,900,Math.round((t%6)*900)],[-1,0,0],[chs[5]>1500?4:-1,800,Math.round((t*500)%1000)],[5,700,Math.round((t*300)%1000)],[-1,0,0]],ev:[1,900,Math.round((t*120)%1000)],lt:[90,50,0,0,0,0],
+  hits:DS.hits,tx:DS.tx,txa:Math.round((t%9)*1000),hta:Math.round((t%20)*1000),ps:2,al:DS.alerts,heap:107390-Math.floor(t)%40,aload:20,fr:42,se:{wm:0,wb:0}};
+ if(p==='/api/rc')return{ch:chs,mn:Array(14).fill(1050),mx:Array(14).fill(1949),map:DS.map,link:1,hz:176,fr:Math.round(t*176),bs:0,br:0,dr:0,fo:0,gap:6,age:3,to:500,fs:0};
+ if(p==='/api/wav')return{snd:DN.snd.map((a,i)=>({n:a[0],l:a[1],ok:1,rs:0,rt:'OK',sz:44100+i*9000,dl:44000,du:1000+i*100,ram:i?1:0,fm:1,ch:1,hz:22050,bt:16,pl:i*3,la:4000+i*700,of:0,io:0,pg:i===3?Math.round((t*200)%1000):-1})),cu:90000,cb:98304,fu:123456,ft:1500000,fr:42,fb:60000,mx:1500000,up:'上載成功',hp:107390};
+ if(p==='/api/ir'){const d=[];for(let i=0;i<31;i++)d.push(i&1?385:190);d[9]=3300;
+  return{tn:DS.tune,bz:0,ls:0,lp:-1,ln:0,lt:0,ll:0,po:[0,2],tx:{n:DS.tx,rq:DS.tx,sk:0,la:3300,lb:2026,rl:0,rm:2300,sm:2050,fe:5,fb:1},rx:{se:130,ma:130,hi:DS.hits,ha:9000,hp:0,mc:0,lt:0,bl:0,ed:4000,dr:0,ep:12,nl:150},
+   pf:[0,1,2,3,4].map(i=>{const v=[0,2,4].includes(i)?1:0;return{v,b:(i===0||i===4)?1:0,n:v?31:0,rp:v?50:0,pe:v?20000:0,dp:i===4?0:-1,bm:v?1000:0,fm:50*v,hm:i===0?1:0,tc:(i===0||i===2)?3:0}}),lf:{n:31,a:4000,p:0,d},uk:{n:0,a:-1,p:-1,d:[]},rf:d}}
+ if(p==='/api/sys')return{fw:'示範',up:Math.floor(t)+1200,cm:'ESP32 (示範)',cr:1,cf:240,fz:4194304,sdk:'v4.4.7',rst:1,rsn:'上電',hp:107390,hm:85000,hx:80000,cu:90000,fu:123456,ft:1500000,ssid:'Tank_Battle_Sound',wc:1,ws:1,ip:'192.168.4.1',au:{av:1200,mx:1900,wn:1500,sl:0,sa:-1,bk:100000,ld:20,bp:5805,th:20000},sk:{a:5200,i:2100,l:3900},rq:0,bt:{en:0,mv:0,lo:0},al:0};
+ if(p==='/api/log'){const since=+P.get('since')||0,e=[],txt=['開機 示範','遙控已連線','引擎：點火中','引擎：運行中','開炮｜IR 2 款｜已發射','被擊中 [Tamiya]','設定已儲存','測試播放：主炮','遙控訊號中斷','遙控訊號恢復','事件 11'];for(let i=1;i<=11;i++)if(i>since)e.push([i,1000*i,txt[i-1]]);return{sq:11,now:Math.round(t*1000),e}}
+ return {};
+}
+function demoAct(u){
+ const [p,qs]=u.split('?'),P=new URLSearchParams(qs||'');
+ if(p==='/setVolume')DS.vol=+P.get('val');else if(p==='/fire')DS.tx++;else if(p==='/simhit')DS.hits++;else if(p==='/map')DS.map[+P.get('fn')]=+P.get('ch');
+ else if(p==='/mapreset')DS.map=[0,1,2,3,4,5,6,7];else if(p==='/lightmax')DS.lp[+P.get('i')]=+P.get('v');else if(p==='/headmode')DS.hm=+P.get('v');else if(p==='/irtune')DS.tune=+P.get('val');
+}
+
+let cur='ov',cfg=null,logSeq=0,busy=false,fails=0,timer=0,lastOk=0,cycle=0,again=false,SC=null;
+const FETCH_MS=3000,C={};
+const q=async(u,ms)=>{if(DEMO){await new Promise(r=>setTimeout(r,15));return JSON.parse(JSON.stringify(demoData(u)))}
+ const c=new AbortController(),tm=setTimeout(()=>c.abort(),ms||FETCH_MS);try{const r=await fetch(u,{cache:'no-store',signal:c.signal});if(!r.ok)throw new Error(u+' '+r.status);return await r.json()}finally{clearTimeout(tm)}};
+/* 只喺數值真係變咗先寫 DOM */
+function T(id,t){const e=$(id);t=String(t);if(e.textContent!==t)e.textContent=t}
+function TE(e,t){t=String(t);if(e.textContent!==t)e.textContent=t}
+function H(id,h){if(C['h'+id]===h)return;C['h'+id]=h;$(id).innerHTML=h}
+function W(id,p){const e=$(id),v=(Math.round(p*10)/10)+'%';if(e.style.width!==v)e.style.width=v}
+function LFT(id,p){const e=$(id),v=(Math.round(p*10)/10)+'%';if(e.style.left!==v)e.style.left=v}
+function VV(e,k,v){if(e.style.getPropertyValue(k)!==v)e.style.setProperty(k,v)}
+function pill(id,cls,t){const e=$(id),c='pill '+cls;if(e.className!==c)e.className=c;TE(e,t)}
+function setIf(id,v){const e=$(id);if(document.activeElement!==e)e.value=v}
+function sel(id,v){const e=$(id);if(document.activeElement!==e&&String(e.value)!==String(v))e.value=v}
+const pc=(v,a,b)=>Math.max(0,Math.min(100,(v-a)*100/(b-a)));
 const age=ms=>ms<0?'—':ms<1000?ms+' ms 前':ms<60000?(ms/1000).toFixed(1)+' 秒前':ms<3600000?Math.floor(ms/60000)+' 分 '+Math.floor(ms%60000/1000)+' 秒前':Math.floor(ms/3600000)+' 小時前';
 const dur=s=>{const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return (h?h+' 小時 ':'')+m+' 分 '+(s%60)+' 秒'};
 const kb=b=>(b/1024).toFixed(b<10240?1:0)+' KB';
-const pc=(v,a,b)=>Math.max(0,Math.min(100,(v-a)*100/(b-a)));
-const w=(id,p)=>{$(id).style.width=p+'%'};
 const clock=ms=>{const s=Math.floor(ms/1000);return String(Math.floor(s/3600)).padStart(2,'0')+':'+String(Math.floor(s/60)%60).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
-function pill(id,cls,t){const e=$(id);e.className='pill '+cls;e.textContent=t}
-function setIf(id,v){const e=$(id);if(document.activeElement!==e)e.value=v}
-function sel(id,v){const e=$(id);if(document.activeElement!==e&&String(e.value)!==String(v))e.value=v}
-function lampStyle(el,v,i){const a=v/255;el.style.background=a>0.02?LCOL[i]:'#222';el.style.opacity=a>0.02?(0.25+0.75*a):1;el.style.boxShadow=a>0.05?`0 0 ${4+14*a}px ${LCOL[i]}`:'none'}
-function go(t){cur=t;document.querySelectorAll('.tab').forEach(s=>s.hidden=s.id!=='t-'+t);
- document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
- if(t==='log')clearLog();poll()}
-function clearLog(){logSeq=0;$('log-body').innerHTML=''}
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2400)}
+const recent={};
+function act(u,after,msg){
+ const n=Date.now();if(recent[u]&&n-recent[u]<700)return Promise.resolve();recent[u]=n;
+ try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}
+ if(DEMO){demoAct(u);if(msg)toast('示範：'+msg);if(after)after('OK');return Promise.resolve('OK')}
+ const c=new AbortController(),tm=setTimeout(()=>c.abort(),5000);
+ return fetch(u,{cache:'no-store',signal:c.signal}).then(r=>{if(!r.ok)throw new Error(r.status);return r.text()}).then(t=>{if(msg)toast(msg);if(after)after(t);return t}).catch(()=>toast('指令失敗：坦克冇回應')).finally(()=>clearTimeout(tm))}
+const tile=(id,l,bar,cls)=>`<div class="t${cls||''}"><span>${l}</span><b id="${id}">—</b>${bar?`<div class="bar${bar[1]||''}"><i id="${bar[0]}"></i></div>`:''}</div>`;
+const tiles=(box,arr)=>{$(box).innerHTML=arr.map(a=>tile(a[0],a[1],a[2],a[3])).join('')};
+
+function go(t,focus){
+ cur=t;cycle=0;document.querySelectorAll('.tab').forEach(s=>s.hidden=s.id!=='t-'+t);
+ document.querySelectorAll('#tabs button').forEach(b=>{const on=b.dataset.t===t;b.setAttribute('aria-selected',on);b.tabIndex=on?0:-1;if(on&&focus)b.focus()});
+ try{history.replaceState(null,'','#'+t)}catch(e){}
+ window.scrollTo(0,0);if(t==='log')clearLog();if(busy)again=true;else poll()}
+function clearLog(){logSeq=0;C['hlog-body']=null;$('log-body').innerHTML=''}
 
 function build(){
- $('tabs').innerHTML=TABS.map(t=>`<button data-t="${t[0]}" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
- $('o-vo').innerHTML=[...VNAME,'引擎 Loop'].map((n,i)=>`<div class="vrow" id="vr${i}"><span class="vn">${n}</span><span class="vs" id="vs${i}">—</span><span></span><div class="bar g"><i id="vb${i}"></i></div></div>`).join('');
- $('o-fn').innerHTML=cfg.fn.slice(0,6).map((n,i)=>`<div class="fnrow"><span class="vn">${E(n)}</span><div class="bar"><i id="fb${i}"></i></div><b id="fv${i}">—</b></div>`).join('');
- $('o-lt').innerHTML=cfg.lights.map((l,i)=>`<div style="text-align:center"><div class="lamp" id="ol${i}" style="margin:0 auto 4px"></div><div class="mut">${E(l.n.split(' ')[0])}</div></div>`).join('');
- let h='';for(let i=0;i<14;i++)h+=`<tr><td>CH${i+1}</td><td id="rf${i}" class="mut"></td><td><div class="rbar"><s style="left:50%"></s><i id="rb${i}"></i><u id="rn${i}" style="left:0"></u><u id="rx${i}" style="left:0"></u></div></td><td class="n" id="rv${i}">—</td><td class="n mut" id="rr${i}">—</td></tr>`;
+ $('main').hidden=false;$('tabs').hidden=false;
+ const nav=$('tabs');nav.setAttribute('role','tablist');nav.setAttribute('aria-label','功能分頁');
+ nav.innerHTML=TABS.map(t=>`<button role="tab" id="tab-${t[0]}" data-t="${t[0]}" aria-controls="t-${t[0]}" aria-selected="false" tabindex="-1" onclick="go('${t[0]}')">${t[1]}</button>`).join('');
+ TABS.forEach(t=>{const p=$('t-'+t[0]);p.setAttribute('role','tabpanel');p.setAttribute('aria-labelledby','tab-'+t[0])});
+ nav.onkeydown=e=>{const fc=(document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.t)||cur,i=TABS.findIndex(t=>t[0]===fc);let j=-1;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown')j=(i+1)%TABS.length;else if(e.key==='ArrowLeft'||e.key==='ArrowUp')j=(i+TABS.length-1)%TABS.length;else if(e.key==='Home')j=0;else if(e.key==='End')j=TABS.length-1;
+  if(j>=0){e.preventDefault();go(TABS[j][0],true)}};
+ $('o-vo').innerHTML=VN.map((n,i)=>`<span class="vc" id="vc${i}">${n}</span>`).join('');
+ $('o-fn').innerHTML=cfg.fn.slice(0,6).map((n,i)=>`<div class="g"><div class="gl"><span>${E(n)}</span><b id="fv${i}">—</b></div><div class="bar"><i id="fb${i}"></i></div></div>`).join('');
+ $('o-lt').innerHTML=cfg.lights.map((l,i)=>`<div class="lm"><div class="lamp" id="ol${i}"></div>${LSHORT[i]||E(l.n.split(' ')[0])}</div>`).join('');
+ tiles('o-tiles',[['o-fr','Flash 讀取'],['o-tx','發射'],['o-hit','被擊中'],['o-up','運行時間'],['o-heap','可用記憶體'],['o-aload','音訊負載']]);
+ tiles('rc-tiles',[['r-link','狀態'],['r-hz','幀率'],['r-fr','有效幀'],['r-age','最後一幀'],['r-bs','校驗錯誤'],['r-br','超出範圍'],['r-dr','丟棄位元組'],['r-fo','中斷次數'],['r-gap','最大幀間隔']]);
+ let h='';for(let i=0;i<14;i++)h+=`<div class="ch"><div class="cl"><span><b style="font-weight:600">CH${i+1}</b> <em id="rf${i}"></em></span><b id="rv${i}">—</b></div><div class="rb"><s></s><i id="rb${i}"></i><u id="rn${i}"></u><u id="rx${i}"></u></div><div class="mm" id="rr${i}"></div></div>`;
  $('rc-body').innerHTML=h;
  const opt='<option value="-1">停用</option>'+Array.from({length:14},(_,i)=>`<option value="${i}">CH${i+1}</option>`).join('');
- $('map-grid').innerHTML=cfg.fn.map((n,i)=>`<label>${E(n)}<select id="mp${i}" onchange="act('/map?fn=${i}&ch='+this.value,()=>{loadCfg();poll()})">${opt}</select></label>`).join('');
- $('lt-list').innerHTML=cfg.lights.map((l,i)=>`<div class="lrowl"><div class="lamp" id="ll${i}"></div><div><div><b>${E(l.n)}</b> <span class="mut">GPIO ${l.pin>=0?l.pin:'停用'}</span> <span class="mut" id="lv${i}"></span></div>
-  <div class="bar"><i id="lb${i}"></i></div>
-  <div class="lctl"><span class="mut">最大亮度</span><input type="range" min="0" max="100" id="lm${i}"><b id="lp${i}" style="min-width:42px;text-align:right">100%</b><button class="s grn" onclick="act('/lighttest?i=${i}')">測試</button></div></div></div>`).join('');
- cfg.lights.forEach((l,i)=>{const r=$('lm'+i);r.oninput=()=>$('lp'+i).textContent=r.value+'%';r.onchange=()=>act('/lightmax?i='+i+'&v='+r.value)});
+ $('map-grid').innerHTML=cfg.fn.map((n,i)=>`<label>${E(n)}<select id="mp${i}" onchange="act('/map?fn=${i}&ch='+this.value,()=>{loadCfg();poll()},'已更改頻道對應')">${opt}</select></label>`).join('');
+ $('lt-list').innerHTML=cfg.lights.map((l,i)=>`<div class="lr"><div class="lamp" id="ll${i}"></div><div class="ln"><b>${E(l.n)}</b> <span class="mut">GPIO ${l.pin>=0?l.pin:'停用'} · 現時 <span id="lv${i}">—</span></span><div class="bar"><i id="lb${i}"></i></div></div>
+  <button class="grn" aria-label="測試 ${E(l.n)}" onclick="act('/lighttest?i=${i}',null,'測試：${E(l.n)}')">測試</button>
+  <div class="sl"><span class="mut">最大亮度</span><input type="range" min="0" max="100" id="lm${i}" aria-label="${E(l.n)} 最大亮度"><b id="lp${i}">100%</b></div></div>`).join('');
+ cfg.lights.forEach((l,i)=>{const r=$('lm'+i);r.oninput=()=>T('lp'+i,r.value+'%');r.onchange=()=>act('/lightmax?i='+i+'&v='+r.value)});
  $('l-hm').onchange=e=>act('/headmode?v='+e.target.value);
- $('wav-list').innerHTML=cfg.snd.map(s=>`<div class="srow" id="sr-${s.n}"><div class="s-head"><b>${E(s.l)}</b><span class="mut">${s.n}.wav</span><span class="pill" id="ss-${s.n}">—</span></div>
-  <div class="s-info" id="si-${s.n}">—</div><div class="bar g"><i id="sb-${s.n}"></i></div>
-  <div class="s-act"><button class="s grn" onclick="play('${s.n}')">▶ 測試</button><input type="file" id="uf-${s.n}" accept=".wav,audio/wav"><button class="s" onclick="upload('${s.n}')">上載</button><button class="s red" onclick="del('${s.n}','${E(s.l)}')">刪除</button></div>
-  <div class="bar up b"><i id="up-${s.n}"></i></div></div>`).join('');
+ tiles('wav-tiles',[['w-cache','音效 RAM 快取',['w-cacheb',' g']],['w-fs','檔案空間',['w-fsb',' b']],['w-fr','Flash 讀取 (串流)'],['w-up','最後一次上載']]);
+ $('wav-list').innerHTML=cfg.snd.map(s=>`<div class="sd" id="sr-${s.n}"><div class="s1"><b>${E(s.l)}</b><span class="pill" id="ss-${s.n}">—</span><span class="grow"></span>
+  <button class="grn" aria-label="測試播放 ${E(s.l)}" onclick="play('${s.n}')">▶</button>
+  <label class="btn" aria-label="換 ${E(s.l)} 嘅檔案"><input type="file" class="sr" id="uf-${s.n}" accept=".wav,audio/wav" onchange="pick('${s.n}','${E(s.l)}')">換檔</label>
+  <button class="red" aria-label="刪除 ${E(s.l)}" onclick="del('${s.n}','${E(s.l)}')">刪</button></div>
+  <div class="si" id="si-${s.n}">—</div><div class="pbar" id="pbw-${s.n}"><i id="sb-${s.n}"></i></div></div>`).join('');
+ tiles('ir-t1',[['i-seq','發射序列',null,' w2'],['i-sm','一發總時間'],['i-ls','學習狀態']]);
+ $('ir-t1').insertAdjacentHTML('beforeend','<div class="t w2"><span>脈衝補償 µs</span><input type="number" id="i-tune" min="0" max="200" step="5" aria-label="脈衝補償 (微秒)"></div>');
+ tiles('ir-t2',[['i-tx','發射 / 請求 / 略過'],['i-txa','最後發射'],['i-rl','裝填倒數'],['i-fe','開炮掣 / 被擋'],['i-se','見到 / 命中樣板'],['i-ha','被擊中 (次 · 最後)'],['i-mc','連續命中幀 / 鎖定'],['i-ep','環境 IR 雜訊'],['i-ed','ISR 邊緣 / 丟失']]);
+ $('pf-body').innerHTML=cfg.pn.map((n,i)=>`<div class="pr off" id="pr${i}"><div class="pr1"><b>${E(n)}</b><span id="p-st${i}"></span><span class="grow"></span>
+  <button class="grn" aria-label="學習 ${E(n)}" onclick="act('/irlearn?slot=${i}',()=>poll(),'開始學習 ${E(n)}：請對住接收頭開火')">學習</button>
+  <button class="gry" aria-label="重設 ${E(n)}" onclick="if(confirm('重設 ${E(n)}？'))act('/irreset?slot=${i}',()=>poll(),'已重設 ${E(n)}')">重設</button></div><div class="pr2" id="p-d${i}"></div></div>`).join('');
  $('i-tune').onchange=e=>act('/irtune?val='+e.target.value);
- $('vol').oninput=e=>$('vol-v').textContent=e.target.value+'%';
- $('vol').onchange=e=>act('/setVolume?val='+e.target.value);
- $('pf-body').innerHTML=cfg.pn.map((n,i)=>`<tr><td><b>${n}</b></td><td id="pa${i}"></td><td class="n" id="pb${i}"></td><td class="n" id="pc${i}"></td><td class="n" id="pd${i}"></td><td class="n" id="pe${i}"></td><td class="n" id="ph${i}"></td><td class="n" id="pf${i}"></td><td class="n" id="pg${i}"></td><td style="white-space:nowrap"><button class="s grn" onclick="act('/irlearn?slot=${i}',()=>poll())">學習</button> <button class="s gry" onclick="if(confirm('重設 ${n}？'))act('/irreset?slot=${i}',()=>poll())">重設</button></td></tr>`).join('');
+ $('vol').oninput=e=>T('vol-v',e.target.value+'%');$('vol').onchange=e=>act('/setVolume?val='+e.target.value);
+ const SG=[['裝置',[['s-fw','韌體'],['s-chip','晶片'],['s-cpu','CPU / Flash'],['s-sdk','SDK'],['s-up','運行時間'],['s-rst','上次重啟原因']]],
+  ['記憶體',[['s-hp','可用'],['s-hm','歷來最低'],['s-hx','最大連續區塊'],['s-cu','音效 RAM 快取'],['s-fs','檔案空間']]],
+  ['音訊處理',[['s-ld','負載 (平均 / block)',['s-ldb','']],['s-av','每個 block 平均'],['s-wn','最近 1 秒最大'],['s-mx','開機以來最大'],['s-sl','偏慢次數 (>20 ms)'],['s-bk','處理過嘅 block']]],
+  ['任務堆疊餘量 (bytes，愈細愈危險，少於 ~1000 要留意)',[['s-ska','音訊 / 控制'],['s-ski','IR 發射'],['s-skl','網頁 loop']]],
+  ['Wi-Fi',[['s-ssid','SSID'],['s-ip','位址 / 頻道'],['s-ws','已連線裝置'],['s-rq','網頁請求總數']]],
+  ['電池',[['s-batt','電壓',null,' w2']]]];
+ $('sys-groups').innerHTML=SG.map((g,i)=>`<div id="sgw${i}"><h2 class="gh">${g[0]}</h2><div class="tiles" id="sg${i}"></div></div>`).join('');
+ SG.forEach((g,i)=>tiles('sg'+i,g[1]));
  applyCfg();
 }
 async function loadCfg(){cfg=await q('/api/cfg');applyCfg()}
 function applyCfg(){
- if(!cfg)return;$('fw').textContent=cfg.fw;
- if(document.activeElement!==$('vol')){$('vol').value=cfg.vol;$('vol-v').textContent=cfg.vol+'%'}
+ if(!cfg)return;
+ if(document.activeElement!==$('vol')){$('vol').value=cfg.vol;T('vol-v',cfg.vol+'%')}
  setIf('i-tune',cfg.tune);sel('l-hm',cfg.hm);
  cfg.map.forEach((m,i)=>{const e=$('mp'+i);if(e)sel('mp'+i,m)});
- cfg.lights.forEach((l,i)=>{const r=$('lm'+i);if(r&&document.activeElement!==r){r.value=l.pct;$('lp'+i).textContent=l.pct+'%'}});
- const nm=c=>c<0?'(停用)':'CH'+(c+1);$('l-chh').textContent=nm(cfg.map[6]);$('l-cha').textContent=nm(cfg.map[7]);
+ cfg.lights.forEach((l,i)=>{const r=$('lm'+i);if(r&&document.activeElement!==r){r.value=l.pct;T('lp'+i,l.pct+'%')}});
+ const nm=c=>c<0?'(停用)':'CH'+(c+1);T('l-chh',nm(cfg.map[6]));T('l-cha',nm(cfg.map[7]));
 }
 
 async function tick(url,fn){const d=await q(url);try{fn(d)}catch(e){console.error('render '+url+': '+e.message);throw e}}
 async function poll(){
- if(busy)return;busy=true;clearTimeout(timer);
+ if(busy||document.hidden)return;busy=true;clearTimeout(timer);const t0=performance.now();
  try{
-  await tick('/api/live',renderLive);
+  if(cur==='ov'||cur==='lt'||cycle%3===0)await tick('/api/live',renderLive);
   if(cur==='rc')await tick('/api/rc',renderRc);
   else if(cur==='wav')await tick('/api/wav',renderWav);
   else if(cur==='ir')await tick('/api/ir',renderIr);
   else if(cur==='sys')await tick('/api/sys',renderSys);
   else if(cur==='log')await tick('/api/log?since='+logSeq,renderLog);
-  fails=0;$('off').hidden=true;
- }catch(e){if(++fails>=2)$('off').hidden=false}
- busy=false;timer=setTimeout(poll,(cur==='rc'||cur==='ov'||cur==='lt')?300:600);
+  cycle++;fails=0;lastOk=Date.now();$('off').hidden=true;
+ }catch(e){fails++;if(fails>=2)$('off').hidden=false}
+ const took=performance.now()-t0,base=(cur==='rc'||cur==='ov'||cur==='lt')?300:600;
+ const wait=fails?Math.min(2000,500*Math.pow(2,fails-1)):Math.max(base,Math.round(took*2));
+ busy=false;timer=setTimeout(poll,again?0:wait);again=false;
 }
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){clearTimeout(timer);poll()}});
+setInterval(()=>{if(!lastOk)return;const sec=Math.round((Date.now()-lastOk)/1000);T('ago',sec>=2?sec+' 秒前':'');document.body.classList.toggle('stale',sec>=4)},1000);
 
+function lampStyle(el,v,i){const k='l'+el.id;if(C[k]===v)return;C[k]=v;const a=v/255;el.style.background=a>0.02?LCOL[i]:'#222';el.style.opacity=a>0.02?(0.25+0.75*a):1;el.style.boxShadow=a>0.05?`0 0 ${4+14*a}px ${LCOL[i]}`:'none'}
 function renderLive(L){
- live=L;
- pill('h-link',L.link?'ok':'bad','遙控 '+(L.link?'正常 '+L.hz+' Hz':'無訊號'));
- pill('h-eng','info','引擎 '+ENG[L.eng]);
- pill('h-ir','','IR 互通 '+L.ps+' 款｜擊中 '+L.hits+'｜發射 '+L.tx);
+ pill('h-link',L.link?'ok':'bad','遙控 '+(L.link?L.hz+' Hz':'無訊號'));
+ pill('h-eng','info',ENG[L.eng]);
+ pill('h-ir','','IR '+L.ps+'款 擊'+L.hits+' 發'+L.tx);
  const items=AL.filter(a=>L.al>>a[0]&1);
  const worst=items.some(a=>a[1]==='e')?'bad':items.some(a=>a[1]==='w')?'warn':items.length?'info':'ok';
- pill('h-al',worst,items.length?'警示 '+items.length:'一切正常');
- L.lt.forEach((v,i)=>{ if(cur==='ov')lampStyle($('ol'+i),v,i); if(cur==='lt'){lampStyle($('ll'+i),v,i);w('lb'+i,v*100/255);$('lv'+i).textContent=Math.round(v*100/255)+'%'} });
+ pill('h-al',worst,items.length?'警示 '+items.length:'正常');
+ L.lt.forEach((v,i)=>{if(cur==='ov')lampStyle($('ol'+i),v,i);if(cur==='lt'){lampStyle($('ll'+i),v,i);T('lv'+i,Math.round(v*100/255)+'%');W('lb'+i,v*100/255)}});
  if(cur!=='ov')return;
- $('al-list').innerHTML=items.length?items.map(a=>{let t=a[2];if(a[0]===1)t+=` (${L.se.wm} 個)`;if(a[0]===2)t+=` (${L.se.wb} 個)`;return `<div class="alert ${a[1]}">${E(t)}</div>`}).join(''):'<div class="alert k">✔ 一切正常</div>';
- $('o-eng').textContent=ENG[L.eng];
- $('o-pit').textContent=(L.pit/1000).toFixed(2)+'×';w('o-pitb',pc(L.pit/1000,0.55,2.1));
- $('o-ld').textContent=L.ld;w('o-ldb',pc(L.ld,0,500));
- for(let i=0;i<6;i++){const v=L.vo[i];vo(i,v[0],v[2])}
- vo(6,L.ev[0]?0:-1,L.ev[2]);
- for(let i=0;i<6;i++){const ch=L.map[i];const e=$('fv'+i);
-  if(ch<0){e.textContent='停用';w('fb'+i,0);continue}
+ H('al-list',items.map(a=>{let t=a[2];if(a[0]===1)t+=` (${L.se.wm} 個)`;if(a[0]===2)t+=` (${L.se.wb} 個)`;return `<div class="alert ${a[1]}">${E(t)}</div>`}).join(''));
+ if($('al-list').hidden===!!items.length)$('al-list').hidden=!items.length;
+ T('o-eng',ENG[L.eng]);T('o-pit',(L.pit/1000).toFixed(2)+'×');W('o-pitb',pc(L.pit/1000,0.55,2.1));T('o-ld',L.ld);W('o-ldb',pc(L.ld,0,500));
+ for(let i=0;i<7;i++){const on=i<6?L.vo[i][0]>=0:!!L.ev[0],p=on?(i<6?L.vo[i][2]:L.ev[2])/10:0,e=$('vc'+i);if(e.classList.contains('on')!==on)e.classList.toggle('on',on);VV(e,'--p',Math.round(p)+'%')}
+ for(let i=0;i<6;i++){const ch=L.map[i],e=$('fv'+i);
+  if(ch<0){TE(e,'停用');W('fb'+i,0);continue}
   const v=L.ch[ch];
-  if(i>=4){const on=L.fs>>(i-4)&1;e.textContent=on?'ON':'OFF';w('fb'+i,on?100:0)}
-  else{e.textContent='CH'+(ch+1)+' '+v;w('fb'+i,pc(v,1000,2000))}}
- $('o-pr').textContent=L.ps+' 款';
- $('o-tx').textContent=L.tx+' 次 / '+age(L.txa);
- $('o-hit').textContent=L.hits+' 次 / '+age(L.hta);
- $('o-up').textContent=dur(L.up);$('o-heap').textContent=kb(L.heap);
- $('o-aload').textContent=L.aload+'%';$('o-fr').textContent=L.fr+' 次/秒';
+  if(i>=4){const on=L.fs>>(i-4)&1;TE(e,on?'ON':'OFF');W('fb'+i,on?100:0)}
+  else{TE(e,'CH'+(ch+1)+' '+v);W('fb'+i,pc(v,1000,2000))}}
+ T('o-fr',L.fr+' 次/秒');T('o-tx',L.tx+' 次 · '+age(L.txa));T('o-hit',L.hits+' 次 · '+age(L.hta));
+ T('o-up',dur(L.up));T('o-heap',kb(L.heap));T('o-aload',L.aload+'%');
 }
-function vo(i,snd,prog){const on=snd>=0;$('vr'+i).classList.toggle('on',on);
- $('vs'+i).textContent=on?cfg.snd[snd].l:'—';w('vb'+i,on?prog/10:0)}
-
 function renderRc(D){
- $('r-link').innerHTML=D.link?'<span style="color:var(--ok)">正常</span>':'<span style="color:var(--bad)">無訊號</span>';
- $('r-hz').textContent=D.hz+' Hz';$('r-age').textContent=age(D.age);$('r-fr').textContent=D.fr;
- $('r-bs').textContent=D.bs;$('r-br').textContent=D.br;$('r-dr').textContent=D.dr;$('r-fo').textContent=D.fo;$('r-gap').textContent=D.gap+' ms';
+ H('r-link',D.link?'<span style="color:var(--ok)">正常</span>':'<span style="color:var(--bad)">無訊號</span>');
+ T('r-hz',D.hz+' Hz');T('r-age',age(D.age));T('r-fr',D.fr);T('r-bs',D.bs);T('r-br',D.br);T('r-dr',D.dr);T('r-fo',D.fo);T('r-gap',D.gap+' ms');
  for(let i=0;i<14;i++){
-  const fns=D.map.map((c,f)=>c===i?cfg.fn[f]:null).filter(Boolean);
-  $('rf'+i).textContent=fns.join(' / ');
-  const v=D.ch[i];
-  $('rv'+i).textContent=v;w('rb'+i,pc(v,900,2100));
-  $('rn'+i).style.left=pc(D.mn[i]||v,900,2100)+'%';$('rx'+i).style.left=pc(D.mx[i]||v,900,2100)+'%';
-  $('rr'+i).textContent=(D.mn[i]||'—')+'~'+(D.mx[i]||'—');
+  T('rf'+i,D.map.map((c,f)=>c===i?cfg.fn[f]:null).filter(Boolean).join('/'));
+  const v=D.ch[i];T('rv'+i,v);W('rb'+i,pc(v,900,2100));LFT('rn'+i,pc(D.mn[i]||v,900,2100));LFT('rx'+i,pc(D.mx[i]||v,900,2100));T('rr'+i,'範圍 '+(D.mn[i]||'—')+' ~ '+(D.mx[i]||'—'));
  }
  D.map.forEach((m,i)=>sel('mp'+i,m));
 }
-
 function renderWav(D){
- $('w-cache').textContent=kb(D.cu)+' / '+kb(D.cb);w('w-cacheb',D.cb?D.cu*100/D.cb:0);
- $('w-fs').textContent=kb(D.fu)+' / '+kb(D.ft);w('w-fsb',D.ft?D.fu*100/D.ft:0);
- $('w-fr').textContent=D.fr+' 次/秒，'+kb(D.fb)+'/秒';$('w-up').textContent=D.up;
+ T('w-cache',kb(D.cu)+' / '+kb(D.cb));W('w-cacheb',D.cb?D.cu*100/D.cb:0);T('w-fs',kb(D.fu)+' / '+kb(D.ft));W('w-fsb',D.ft?D.fu*100/D.ft:0);
+ T('w-fr',D.fr+' 次/秒 · '+kb(D.fb)+'/秒');T('w-up',D.up);
  D.snd.forEach(s=>{
   const n=s.n,st=$('ss-'+n),row=$('sr-'+n);
-  st.className='pill '+(s.ok?'ok':s.rs===1?'warn':'bad');st.textContent=s.ok?'OK':s.rt;row.classList.toggle('bad',!s.ok);
+  const c='pill '+(s.ok?'ok':s.rs===1?'warn':'bad');if(st.className!==c)st.className=c;TE(st,s.ok?'OK':s.rt);row.classList.toggle('bad',!s.ok);
   let info;
-  if(s.ok)info=`${kb(s.sz)}｜${(s.du/1000).toFixed(2)} 秒｜${s.ram?'已載入 RAM':'由 flash 串流'}｜播放 ${s.pl} 次｜最後 ${age(s.la)}`+(s.of?`｜<span style="color:var(--bad)">開檔失敗 ${s.of}</span>`:'')+(s.io?`｜<span style="color:var(--bad)">讀取錯誤 ${s.io}</span>`:'');
-  else{info=s.rs===1?'檔案唔存在，請上載。':`實際格式：${s.hz?s.hz+' Hz':'—'} / ${s.ch||'—'} 聲道 / ${s.bt||'—'} bit (需要 22050 Hz / 1 聲道 / 16 bit PCM)`;if(s.of)info+=`｜開檔失敗 ${s.of}`}
-  $('si-'+n).innerHTML=info;w('sb-'+n,s.pg>=0?s.pg/10:0);
+  if(s.ok)info=`${s.n}.wav · ${kb(s.sz)} · ${(s.du/1000).toFixed(2)} 秒 · ${s.ram?'已載入 RAM':'由 flash 串流'} · 播放 ${s.pl} 次 · ${age(s.la)}`+(s.of?` · <span style="color:var(--bad)">開檔失敗 ${s.of}</span>`:'')+(s.io?` · <span style="color:var(--bad)">讀取錯誤 ${s.io}</span>`:'');
+  else{info=`${s.n}.wav · `+(s.rs===1?'檔案唔存在，請上載。':`實際格式：${s.hz?s.hz+' Hz':'—'} / ${s.ch||'—'} 聲道 / ${s.bt||'—'} bit (需要 22050 Hz / 1 聲道 / 16 bit PCM)`);if(s.of)info+=` · 開檔失敗 ${s.of}`}
+  H('si-'+n,info);if(!$('pbw-'+n).classList.contains('up'))W('sb-'+n,s.pg>=0?s.pg/10:0);
  });
 }
-function play(n){act('/play?s='+n,()=>setTimeout(poll,120))}
-function del(n,l){if(confirm('刪除「'+l+'」？'))act('/del?file='+n,()=>{toast('已刪除');poll()})}
-function upload(n){
- const f=$('uf-'+n).files[0];if(!f){toast('請先揀一個 .wav 檔');return}
- const x=new XMLHttpRequest(),fd=new FormData();fd.append('wav',f,f.name);
+function play(n){act('/play?s='+n,()=>setTimeout(poll,120),'試播：'+n)}
+function del(n,l){if(confirm('刪除「'+l+'」？'))act('/del?file='+n,()=>{toast('已刪除 '+l);poll()})}
+function pick(n,l){const inp=$('uf-'+n),f=inp.files[0];if(!f)return;if(!confirm('上載「'+f.name+'」去「'+l+'」？\n會取代而家嘅檔案。')){inp.value='';return}upload(n,f);inp.value=''}
+function upload(n,f){
+ if(DEMO){toast('示範模式：唔會真係上載');return}
+ const x=new XMLHttpRequest(),fd=new FormData(),pb=$('pbw-'+n);fd.append('wav',f,f.name);pb.classList.add('up');
  x.open('POST','/upload?file='+n);
- x.upload.onprogress=e=>{if(e.lengthComputable)w('up-'+n,e.loaded*100/e.total)};
- x.onload=()=>{w('up-'+n,0);q('/api/wav').then(d=>{toast(d.up);renderWav(d)}).catch(()=>toast(x.status===200?'上載成功':'上載失敗'))};
- x.onerror=()=>{w('up-'+n,0);toast('上載失敗：連線中斷')};
- x.send(fd);toast('上載中…');
+ x.upload.onprogress=e=>{if(e.lengthComputable)W('sb-'+n,e.loaded*100/e.total)};
+ const done=()=>{pb.classList.remove('up');W('sb-'+n,0)};
+ x.onload=()=>{done();q('/api/wav').then(d=>{toast(d.up);renderWav(d)}).catch(()=>toast(x.status===200?'上載成功':'上載失敗'))};
+ x.onerror=()=>{done();toast('上載失敗：連線中斷')};x.send(fd);toast('上載中…');
 }
-
-function drawScope(cv,ref,fr,col){
- const c=cv.getContext('2d'),W=cv.width,H=cv.height;
- c.fillStyle='#0b0d0f';c.fillRect(0,0,W,H);
- const sum=a=>a.reduce((x,y)=>x+y,0),tot=Math.max(sum(ref),sum(fr),1000),sx=(W-24)/tot;
- c.strokeStyle='#222a31';c.lineWidth=1;c.font='11px sans-serif';c.fillStyle='#6e7681';
+function drawScope(){
+ const cv=$('scope');if(!SC)return;const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(!w||!h)return;
+ const W_=Math.round(w*dpr),H_=Math.round(h*dpr);if(cv.width!==W_||cv.height!==H_){cv.width=W_;cv.height=H_}
+ const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);const {ref,fr,col}=SC;
+ c.fillStyle='#0b0d0f';c.fillRect(0,0,w,h);
+ const sum=a=>a.reduce((x,y)=>x+y,0),tot=Math.max(sum(ref),sum(fr),1000),sx=(w-16)/tot;
+ c.font='10px sans-serif';c.fillStyle='#6e7681';c.strokeStyle='#222a31';c.lineWidth=1;
  const step=tot>20000?5000:tot>8000?2000:1000;
- for(let t=0;t<=tot;t+=step){const x=12+t*sx;c.beginPath();c.moveTo(x,0);c.lineTo(x,H-14);c.stroke();c.fillText((t/1000)+' ms',x+2,H-3)}
- const lane=(a,color,top,dash,label)=>{
-  c.fillStyle='#6e7681';c.fillText(label,14,top-2);
-  if(!a.length){c.fillText('(冇資料)',90,top+18);return}
-  c.strokeStyle=color;c.lineWidth=2;c.setLineDash(dash?[5,3]:[]);c.beginPath();
-  let x=12;const hi=top+4,lo=top+44;c.moveTo(x,lo);
-  a.forEach((d,i)=>{const y=i%2===0?hi:lo;c.lineTo(x,y);x+=d*sx;c.lineTo(x,y)});
-  c.lineTo(x,lo);c.stroke();c.setLineDash([]);
- };
- lane(ref,'#8b949e',14,true,'樣板');lane(fr,col,H/2+6,false,'實際收到');
+ for(let t=0;t<=tot;t+=step){const x=8+t*sx;c.beginPath();c.moveTo(x,0);c.lineTo(x,h-12);c.stroke();c.fillText((t/1000)+'ms',x+2,h-2)}
+ const lh=(h-16)/2;
+ const lane=(a,color,top,dash,label)=>{c.fillStyle='#6e7681';c.fillText(label,10,top+9);if(!a.length)return;c.strokeStyle=color;c.lineWidth=1.6;c.setLineDash(dash?[4,3]:[]);c.beginPath();
+  let x=8;const hi=top+11,lo=top+lh-4;c.moveTo(x,lo);a.forEach((d,i)=>{const y=i%2===0?hi:lo;c.lineTo(x,y);x+=d*sx;c.lineTo(x,y)});c.lineTo(x,lo);c.stroke();c.setLineDash([])};
+ lane(ref,'#8b949e',0,true,'樣板');lane(fr,col,lh+2,false,'實際收到');
 }
 function renderIr(D){
- setIf('i-tune',D.tn);
- $('i-seq').textContent=D.po.length?D.po.map(i=>cfg.pn[i]).join(' → '):'(冇)';
- $('i-sm').textContent=(D.tx.sm/1000).toFixed(2)+' 秒';
- let ls=LS[D.ls];if(D.ls===1)ls+=` (剩 ${Math.ceil(D.ll/1000)} 秒，${cfg.pn[D.lp]})`;if(D.ls===2)ls+=` (${D.lt} 幀，${cfg.pn[D.lp]})`;
- $('i-ls').textContent=ls;
- $('i-tx').textContent=D.tx.n+' / '+D.tx.rq+' / '+D.tx.sk;$('i-txa').textContent=age(D.tx.la)+(D.tx.lb?` (用咗 ${D.tx.lb} ms)`:'');
- $('i-rl').textContent=D.tx.rl?D.tx.rl+' ms / '+D.tx.rm+' ms':'已就緒';
- $('i-fe').textContent=D.tx.fe+' / '+D.tx.fb;
- $('i-se').textContent=D.rx.se+' / '+D.rx.ma;$('i-hi').textContent=D.rx.hi;
- $('i-ha').textContent=age(D.rx.ha)+(D.rx.hp>=0?' ['+cfg.pn[D.rx.hp]+']':'');
- $('i-mc').textContent=D.rx.mc+' / '+(D.rx.lt?'鎖定':'備戰')+(D.rx.bl?' (暫停接收 '+D.rx.bl+' ms)':'');
- $('i-ep').innerHTML=D.rx.ep+' 邊緣/秒'+(D.rx.ep>D.rx.nl?' <span style="color:var(--warn)">偏高</span>':' <span style="color:var(--ok)">正常</span>');
- $('i-ed').textContent=D.rx.ed+' / '+D.rx.dr;
- const h=$('i-hint');if(D.rx.ed>100&&D.rx.se===0&&D.ls===0){h.hidden=false;h.textContent='有收到紅外線訊號 (邊緣 '+D.rx.ed+' 個)，但一幀都分唔到：訊號之間嘅間隔可能少於 5 ms，或者雜訊太多。可以試「學習」，或者貼診斷報告俾我睇。'}else h.hidden=true;
+ setIf('i-tune',D.tn);T('i-seq',D.po.length?D.po.map(i=>cfg.pn[i]).join(' → '):'(冇)');T('i-sm',(D.tx.sm/1000).toFixed(2)+' 秒');
+ let ls=LS[D.ls];if(D.ls===1)ls+=` (剩 ${Math.ceil(D.ll/1000)} 秒，${cfg.pn[D.lp]})`;if(D.ls===2)ls+=` (${D.lt} 幀，${cfg.pn[D.lp]})`;T('i-ls',ls);
+ T('i-tx',D.tx.n+' / '+D.tx.rq+' / '+D.tx.sk);T('i-txa',age(D.tx.la)+(D.tx.lb?` (${D.tx.lb} ms)`:''));T('i-rl',D.tx.rl?D.tx.rl+' / '+D.tx.rm+' ms':'已就緒');T('i-fe',D.tx.fe+' / '+D.tx.fb);
+ T('i-se',D.rx.se+' / '+D.rx.ma);T('i-ha',D.rx.hi+' 次 · '+age(D.rx.ha)+(D.rx.hp>=0?' ['+cfg.pn[D.rx.hp]+']':''));
+ T('i-mc',D.rx.mc+' / '+(D.rx.lt?'鎖定':'備戰')+(D.rx.bl?' (暫停 '+D.rx.bl+' ms)':''));
+ H('i-ep',D.rx.ep+' /秒'+(D.rx.ep>D.rx.nl?' <span style="color:var(--warn)">偏高</span>':' <span style="color:var(--ok)">正常</span>'));T('i-ed',D.rx.ed+' / '+D.rx.dr);
+ const h=$('i-hint'),show=D.rx.ed>100&&D.rx.se===0&&D.ls===0;if(h.hidden===show)h.hidden=!show;if(show)TE(h,'有收到紅外線訊號 (邊緣 '+D.rx.ed+' 個)，但一幀都分唔到：訊號間嘅間隔可能少於 5 ms，或者雜訊太多。試吓「學習」，或者貼診斷報告俾我睇。');
  D.pf.forEach((p,i)=>{
   let st=p.v?(p.b?'<span class="pill ok">內置</span>':'<span class="pill info">已學習</span>'):'<span class="pill bad">未設定</span>';
-  if(p.dp>=0)st+=` <span class="mut">= ${cfg.pn[p.dp]} (只發一次)</span>`;
-  $('pa'+i).innerHTML=st;
-  $('pb'+i).textContent=p.n||'—';$('pc'+i).textContent=p.rp||'—';$('pd'+i).textContent=p.pe?(p.pe/1000).toFixed(1)+' ms':'—';
-  $('pe'+i).textContent=p.v?p.bm+' ms':'—';$('ph'+i).textContent=p.tc;$('pf'+i).textContent=p.fm;$('pg'+i).textContent=p.hm;
+  if(p.dp>=0)st+=` <span class="al2">= ${E(cfg.pn[p.dp])} (只發一次)</span>`;
+  H('p-st'+i,st);const r=$('pr'+i);if(r.classList.contains('off')===!!p.v)r.classList.toggle('off',!p.v);
+  T('p-d'+i,p.v?`${p.n} 元素 · 重複 ${p.rp} 次 · 週期 ${(p.pe/1000).toFixed(1)} ms · 發射 ${(p.bm/1000).toFixed(2)} 秒 · 已發射 ${p.tc} 次 · 收到 ${p.fm} 幀 · 命中 ${p.hm} 次`:'');
  });
- const lf=D.lf,col=lf.p>=0?'#3fb950':lf.p===-2?'#2f81f7':'#f85149';
- drawScope($('scope'),D.rf,lf.d,col);
- $('i-lf').textContent=lf.n?`最後一幀：${lf.n} 個元素，${age(lf.a)}，`+(lf.p>=0?'命中 '+cfg.pn[lf.p]:lf.p===-2?'學習中':'未識別'):'未收到任何 IR 訊號 (對住接收頭開火試下)';
- $('i-ukm').textContent=D.uk.n?`${D.uk.n} 個元素，${age(D.uk.a)}`:'';
- $('i-uk').textContent=D.uk.n?D.uk.d.join(','):'未有未識別訊號';
+ const lf=D.lf,col=lf.p>=0?'#3fb950':lf.p===-2?'#2f81f7':'#f85149';SC={ref:D.rf,fr:lf.d,col};drawScope();
+ T('i-lf',lf.n?`最後一幀：${lf.n} 元素，${age(lf.a)}，`+(lf.p>=0?'命中 '+cfg.pn[lf.p]:lf.p===-2?'學習中':'未識別'):'未收到任何 IR 訊號 (對住接收頭開火試下)');
+ $('scope').setAttribute('aria-label','IR 波形對比圖：'+$('i-lf').textContent);
+ T('i-ukm',D.uk.n?`(${D.uk.n} 元素，${age(D.uk.a)})`:'(未有)');T('i-uk',D.uk.n?D.uk.d.join(','):'未有未識別訊號');
 }
-
 function renderSys(D){
- $('s-fw').textContent=D.fw;$('s-chip').textContent=D.cm+' rev'+D.cr;$('s-cpu').textContent=D.cf+' MHz / '+(D.fz/1048576)+' MB';
- $('s-sdk').textContent=D.sdk;$('s-up').textContent=dur(D.up);
- $('s-rst').innerHTML=E(D.rsn)+((D.rst===9||D.rst===4||D.rst===5||D.rst===6||D.rst===7)?' <span class="pill warn">留意</span>':'');
- $('s-hp').textContent=kb(D.hp);$('s-hm').textContent=kb(D.hm);$('s-hx').textContent=kb(D.hx);$('s-cu').textContent=kb(D.cu);$('s-fs').textContent=kb(D.fu)+' / '+kb(D.ft);
- const a=D.au;$('s-ld').textContent=a.ld+'% ('+a.av+' / '+a.bp+' µs)';w('s-ldb',Math.min(100,a.ld));
- $('s-av').textContent=a.av+' µs';$('s-wn').textContent=a.wn+' µs';$('s-mx').textContent=a.mx+' µs';$('s-th').textContent=a.th/1000;
- $('s-sl').textContent=a.sl+(a.sa>=0?' (最近 '+age(a.sa)+')':'');$('s-bk').textContent=a.bk;
- $('s-ska').textContent=D.sk.a||'—';$('s-ski').textContent=D.sk.i||'(未發射過)';$('s-skl').textContent=D.sk.l||'—';
- $('s-ssid').textContent=D.ssid;$('s-ip').textContent=D.ip+' / CH'+D.wc;$('s-ws').textContent=D.ws;$('s-rq').textContent=D.rq;
- $('s-battc').hidden=!D.bt.en;if(D.bt.en)$('s-batt').textContent=(D.bt.mv/1000).toFixed(2)+' V'+(D.bt.lo?' (警示 < '+(D.bt.lo/1000).toFixed(2)+' V)':'');
+ T('s-fw',D.fw);T('s-chip',D.cm+' rev'+D.cr);T('s-cpu',D.cf+' MHz / '+(D.fz/1048576)+' MB');T('s-sdk',D.sdk);T('s-up',dur(D.up));
+ H('s-rst',E(D.rsn)+((D.rst===9||D.rst===4||D.rst===5||D.rst===6||D.rst===7)?' <span class="pill warn">留意</span>':''));
+ T('s-hp',kb(D.hp));T('s-hm',kb(D.hm));T('s-hx',kb(D.hx));T('s-cu',kb(D.cu));T('s-fs',kb(D.fu)+' / '+kb(D.ft));
+ const a=D.au;T('s-ld',a.ld+'% ('+a.av+' / '+a.bp+' µs)');W('s-ldb',Math.min(100,a.ld));T('s-av',a.av+' µs');T('s-wn',a.wn+' µs');T('s-mx',a.mx+' µs');
+ T('s-sl',a.sl+(a.sa>=0?' (最近 '+age(a.sa)+')':''));T('s-bk',a.bk);
+ T('s-ska',D.sk.a||'—');T('s-ski',D.sk.i||'(未發射過)');T('s-skl',D.sk.l||'—');
+ T('s-ssid',D.ssid);T('s-ip',D.ip+' / CH'+D.wc);T('s-ws',D.ws);T('s-rq',D.rq);
+ const bw=$('sgw5');if(bw.hidden===!!D.bt.en)bw.hidden=!D.bt.en;if(D.bt.en)T('s-batt',(D.bt.mv/1000).toFixed(2)+' V'+(D.bt.lo?' (警示 < '+(D.bt.lo/1000).toFixed(2)+' V)':''));
 }
 async function report(){
- let t;try{t=await (await fetch('/report',{cache:'no-store'})).text()}catch(e){toast('讀取失敗');return}
+ let t;try{t=DEMO?'=== 示範診斷報告 ===\n(示範模式冇真實數據；喺坦克上按呢個掣先會有)':await (await fetch('/report',{cache:'no-store'})).text()}catch(e){toast('讀取失敗');return}
  const ta=$('rep');ta.hidden=false;ta.value=t;ta.focus();ta.select();ta.scrollTop=0;let ok=false;
  try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(t);ok=true}}catch(e){}
  if(!ok){try{ok=document.execCommand('copy')}catch(e){}}
  toast(ok?'已複製診斷報告，可直接貼上':'請手動全選複製下面文字');
 }
-function reboot(){act('/reboot',()=>toast('重啟中…等約 10 秒再重新整理'))}
-
+function reboot(){if(DEMO){toast('示範模式：唔會重啟');return}act('/reboot',()=>toast('重啟中…等約 10 秒再重新整理'))}
 function renderLog(D){
- if(D.sq<logSeq){clearLog()}
+ if(D.sq<logSeq)clearLog();
  const b=$('log-body');
- D.e.forEach(e=>{const d=document.createElement('div');d.className='lrow';d.innerHTML=`<time>${clock(e[1])}</time><span>${E(e[2])}</span>`;b.insertBefore(d,b.firstChild)});
+ D.e.forEach(e=>{const d=document.createElement('div');d.className='lg';d.innerHTML=`<time>${clock(e[1])}</time><span>${E(e[2])}</span>`;b.insertBefore(d,b.firstChild)});
  while(b.children.length>200)b.removeChild(b.lastChild);
  logSeq=D.sq;
 }
-
-(async()=>{try{cfg=await q('/api/cfg');build();go('ov')}catch(e){$('off').hidden=false;setTimeout(()=>location.reload(),2000)}})();
+if(window.ResizeObserver)new ResizeObserver(()=>drawScope()).observe($('scope'));
+if(DEMO){$('demoBar').hidden=false;document.title='坦克儀表板 (示範)'}
+async function boot(){
+ try{cfg=await q('/api/cfg');$('noconn').hidden=true;build();const h=location.hash.slice(1);go(TABS.some(t=>t[0]===h)?h:'ov')}
+ catch(e){$('noconn').hidden=false;$('main').hidden=true;$('tabs').hidden=true;setTimeout(boot,2000)}
+}
+boot();
 </script></body></html>
 )rawliteral";
 
