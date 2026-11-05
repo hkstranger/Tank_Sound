@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ESP32 坦克音效轉換器</title>
+<style>
+:root{--bg:#0f1114;--card:#1a1d22;--card2:#15181c;--line:#2c3138;--fg:#e8eaed;--mut:#9aa4ae;--acc:#ff9800;--ok:#3fb950;--bad:#f85149;--warn:#d29922;--blue:#1f6feb}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,-apple-system,"Segoe UI","Microsoft JhengHei","PingFang HK",sans-serif}
+header,main{max-width:1000px;margin:0 auto;padding:0 14px}
+header{padding-top:16px;padding-bottom:6px}
+h1{margin:0 0 4px;font-size:20px;color:var(--acc)}
+h2{margin:0 0 10px;font-size:15px;color:var(--acc)}
+.sub{margin:0 0 8px;color:var(--mut)}
+main{padding-bottom:40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;min-width:0}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;background:#252a31;font-size:12px;white-space:nowrap}
+.pill.ok{background:#12351d;color:#7ee787}.pill.warn{background:#3d2f0b;color:#f2cc60}.pill.info{background:#10294d;color:#79b8ff}
+.mut{color:var(--mut);font-size:12px}
+button,select,input{font:inherit}
+button{background:#30363d;color:#fff;border:0;border-radius:8px;padding:8px 13px;cursor:pointer}
+button.p{background:var(--blue);font-weight:600}
+button.g{background:#238636;font-weight:600}
+button.s{padding:4px 9px;font-size:12px;border-radius:6px}
+button.r{background:#da3633}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible,canvas:focus-visible,.drop:focus-within{outline:2px solid #79b8ff;outline-offset:2px}
+select,input[type=number]{background:#0d1014;color:var(--fg);border:1px solid #3a4048;border-radius:6px;padding:5px 7px}
+input[type=number]{width:86px}
+input[type=range]{width:100%}
+label{cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip input{position:absolute;opacity:0;pointer-events:none}
+.chip span{display:inline-block;padding:7px 14px;border-radius:99px;background:#252a31;border:1px solid #3a4048}
+.chip input:checked+span{background:var(--blue);border-color:#79b8ff;font-weight:600;color:#fff}
+.chip input:focus-visible+span{outline:2px solid #79b8ff;outline-offset:2px}
+.chip{position:relative}
+#slotHint{margin-top:10px;padding:8px 10px;background:var(--card2);border-radius:8px;border-left:3px solid var(--acc)}
+.drop{display:block;border:2px dashed #3a4048;border-radius:12px;padding:22px 14px;text-align:center;background:var(--card2)}
+.drop.over{border-color:#79b8ff;background:#10294d}
+.drop b{font-size:15px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+#err{margin-top:8px;padding:8px 10px;border-radius:8px;background:#3a1717;border-left:4px solid var(--bad)}
+.row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin:8px 0}
+.row.sp{justify-content:space-between}
+.grow{flex:1}
+canvas{width:100%;display:block;background:#0b0d0f;border:1px solid var(--line);border-radius:8px}
+#wave{height:180px;cursor:crosshair;touch-action:pan-y}   /* 手指橫拖 = 選區；直向拖 = 捲動頁面 */
+#outWave{height:110px}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.pbox{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px}
+.pbox h3{margin:0 0 6px;font-size:13px;color:#c9d1d9}
+.pbox .f{display:flex;align-items:center;gap:8px;margin:6px 0;flex-wrap:wrap}
+.kvs{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0}
+.kvs div{background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.kvs b{display:block;font-size:15px}
+ul.chk{list-style:none;margin:8px 0;padding:0}
+ul.chk li{display:flex;gap:8px;padding:6px 9px;margin:4px 0;border-radius:8px;border-left:4px solid;background:var(--card2)}
+ul.chk li.ok{border-color:var(--ok)}ul.chk li.warn{border-color:var(--warn);background:#2b2410}ul.chk li.bad{border-color:var(--bad);background:#2f1616}
+ul.chk .ic{flex:0 0 1.3em;font-weight:700}
+li.ok .ic{color:var(--ok)}li.warn .ic{color:var(--warn)}li.bad .ic{color:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{color:var(--mut);font-weight:500;text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);font-size:12px;white-space:nowrap}
+td{padding:6px;border-bottom:1px solid #21262c;vertical-align:middle}
+td.n{font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.scroll{overflow-x:auto}
+.bar{height:9px;background:#262b31;border-radius:5px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--blue)}
+.bar.over i{background:var(--bad)}
+#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#30363d;color:#fff;padding:8px 14px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;max-width:90vw}
+#toast.on{opacity:1}
+details summary{cursor:pointer;color:#c9d1d9}
+details ul{margin:6px 0 0;padding-left:20px;color:#c9d1d9}
+details li{margin:3px 0}
+
+/* ---- v2 ---- */
+.h2s{color:var(--acc);font-size:15px;font-weight:700}
+#dSet>summary{display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;margin-bottom:8px;list-style:none}
+#dSet>summary::-webkit-details-marker{display:none}
+#dSet>summary::before{content:'▸';color:var(--acc);display:inline-block;transition:transform .15s}
+#dSet[open]>summary::before{transform:rotate(90deg)}
+ul.chk li{align-items:center}
+ul.chk .tx{flex:1;min-width:0;overflow-wrap:anywhere}
+ul.chk li button{margin-left:6px;flex:0 0 auto}
+ul.chk li.info{border-color:var(--blue);background:#101c2b}li.info .ic{color:#79b8ff}
+ul.chk li select{max-width:46%;margin-left:6px}
+#batchList li{flex-wrap:wrap}
+#batchList li .tx{flex:1 1 150px}
+#batchList li select{flex:1 1 120px;max-width:none;margin-left:0}
+#chips i{font-style:normal;color:#7ee787}
+.bar-act{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.row-note{margin:0 0 4px}
+#trayTab td.ops{white-space:nowrap}
+a.pill{color:inherit}
+@media (max-width:720px){
+ #resBar{position:sticky;bottom:0;z-index:4;background:var(--card);padding:10px 0 4px;border-top:1px solid var(--line);box-shadow:0 -8px 10px -6px rgba(0,0,0,.5)}
+ #resBar button{flex:1 1 44%}
+ #toast{bottom:104px}
+}
+@media (max-width:640px){
+ #trayTab thead{display:none}
+ #trayTab,#trayTab tbody,#trayTab tr{display:block}
+ #trayTab tr{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:8px 0;background:var(--card2)}
+ #trayTab td{display:flex;justify-content:space-between;align-items:center;gap:10px;border:0;padding:3px 0;text-align:right;white-space:normal}
+ #trayTab td::before{content:attr(data-label);color:var(--mut);font-size:12px;text-align:left;white-space:nowrap}
+ #trayTab td.nm{display:block;text-align:left;font-weight:700;font-size:14px}#trayTab td.nm::before{content:none}
+ #trayTab td.ops{justify-content:flex-start;gap:8px;padding-top:6px}#trayTab td.ops::before{content:none}
+ #trayTab td.em{display:block;text-align:left}#trayTab td.em::before{content:none}
+ #trayTab tr.empty td:nth-child(2){display:none}
+}
+@media (pointer:coarse){
+ button,select,input[type=number],summary,.chip span{min-height:44px}
+ button.s{padding:8px 12px;font-size:13px}
+ .chip span{padding:10px 16px;display:inline-flex;align-items:center}
+ input[type=checkbox]{width:22px;height:22px}
+ label:has(>input[type=checkbox]){min-height:44px;display:inline-flex;align-items:center;gap:8px}
+ summary{display:flex;align-items:center}
+}
+</style>
+</head>
+<body>
+<header>
+ <h1>ESP32 坦克音效轉換器</h1>
+ <p class="sub">將任何錄音剪輯，並轉成 ESP32 聲卡可用嘅格式，然後喺坦克網頁「音效」分頁上載。全部喺你部機本機處理，檔案唔會上傳去任何地方，離線都用得。</p>
+ <div class="pills" aria-label="輸出格式"><span class="pill ok">WAV</span><span class="pill ok">PCM</span><span class="pill ok">單聲道</span><span class="pill ok">16-bit</span><span class="pill ok">22050 Hz</span><span class="pill info">≤ 1,500,000 bytes</span><a class="pill info" id="packPill" href="#cTray" style="text-decoration:none">音效包 0/8</a></div>
+</header>
+<main>
+
+<section class="card" aria-labelledby="h1">
+ <h2 id="h1">① 揀音效位</h2>
+ <div class="chips" id="chips" role="radiogroup" aria-label="音效位"></div>
+ <div id="slotHint"></div>
+</section>
+
+<section class="card" aria-labelledby="h2">
+ <h2 id="h2">② 載入檔案</h2>
+ <label class="drop" id="drop" for="file"><b>將檔案拖放到呢度，或者撳一下揀檔案 (可以一次揀多個)</b><br><span class="mut">一次揀多個檔：檔名有「engine / 點火 / fire / 機槍…」會自動配對音效位並用預設轉好。WAV (8/16/24/32-bit、浮點) 由本工具直接讀取；MP3、M4A/AAC、OGG、FLAC、WebM 等交由瀏覽器解碼 (視乎你用嘅瀏覽器)；影片檔嘅聲音都試得</span></label>
+ <input class="sr" type="file" id="file" multiple accept="audio/*,video/*,.wav,.wave,.mp3,.m4a,.aac,.ogg,.oga,.opus,.flac,.webm,.mp4">
+ <div id="fileInfo" class="mut" style="margin-top:8px"></div>
+ <div id="err" role="alert" hidden></div>
+</section>
+
+<section class="card" id="sBatch" aria-labelledby="hB" hidden>
+ <div class="row" style="justify-content:space-between;margin-top:0"><h2 id="hB" style="margin:0">批量結果 <span class="mut" id="batchSum"></span></h2><button class="s" id="bBatchClear">收埋</button></div>
+ <ul class="chk" id="batchList"></ul>
+</section>
+<section class="card" id="sEdit" aria-labelledby="h3" hidden>
+ <h2 id="h3">③ 剪輯 <span class="mut">(拖曳兩邊嘅橙色把手，或者喺波形上拖出新選區)</span></h2>
+ <div class="row">
+  <button class="p" id="bPlaySrc">▶ 播放選區</button>
+  <button id="bStop">■ 停止</button>
+  <span class="grow"></span>
+  <button class="s" id="zIn" aria-label="放大">＋ 放大</button><button class="s" id="zOut" aria-label="縮小">－ 縮小</button><button class="s" id="zSel">縮放到選區</button><button class="s" id="zAll">顯示全部</button>
+ </div>
+ <canvas id="wave" role="img" aria-label="原始音訊波形同選區"></canvas>
+ <input type="range" id="pan" min="0" max="1000" value="0" aria-label="橫向移動波形" hidden>
+ <div class="row">
+  <label>開始 <input type="number" id="tA" step="0.0001" min="0"> 秒</label>
+  <label>結束 <input type="number" id="tB" step="0.0001" min="0"> 秒</label>
+  <span>選區長度 <b id="selLen">—</b></span>
+  <span class="mut" id="posRead"></span>
+ </div>
+ <div class="row">
+  <button class="s" id="bFull">全選</button>
+  <button class="s" id="bAuto">自動去頭尾靜音</button>
+  <label>門檻 <input type="number" id="silDb" value="-45" min="-90" max="-6" step="1"> dB</label>
+  <label><input type="checkbox" id="autoLoad" checked> 載入後自動去靜音</label>
+ </div>
+</section>
+
+<section class="card" id="sSet" hidden>
+ <details id="dSet" open><summary><span id="h4" class="h2s">④ 轉換設定</span> <span class="mut" id="setSum"></span></summary>
+ <div class="pgrid">
+  <div class="pbox"><h3>聲道 / 音量</h3>
+   <div class="f"><label for="mix">轉單聲道</label><select id="mix"><option value="avg">左右混合 (平均)</option><option value="L">只用左聲道</option><option value="R">只用右聲道</option></select></div>
+   <div class="f"><label for="gain">增益</label><input type="number" id="gain" value="0" min="-30" max="30" step="0.5"> dB</div>
+   <div class="f"><label><input type="checkbox" id="normOn" checked> 標準化峰值至</label><input type="number" id="normDb" value="-1" min="-24" max="0" step="0.5" aria-label="標準化目標 dBFS"> dBFS</div>
+   <div class="f"><label><input type="checkbox" id="dcOn" checked> 去除直流偏移</label></div>
+  </div>
+  <div class="pbox"><h3>淡入 / 淡出 (消除剪裁爆音)</h3>
+   <div class="f"><label for="fi">淡入</label><input type="number" id="fi" value="2" min="0" max="2000" step="1"> ms</div>
+   <div class="f"><label for="fo">淡出</label><input type="number" id="fo" value="30" min="0" max="2000" step="1"> ms</div>
+   <div class="mut">循環音效請設 0 (韌體本身已經有 12 ms 淡入淡出)</div>
+  </div>
+  <div class="pbox"><h3>無縫循環接駁</h3>
+   <div class="f"><label><input type="checkbox" id="loopOn"> 開啟循環接駁</label></div>
+   <div class="f"><label for="loopMs">重疊長度</label><input type="number" id="loopMs" value="100" min="5" max="3000" step="5"> ms</div>
+   <div class="f"><label for="curve">曲線</label><select id="curve"><option value="eq">等功率 (推薦)</option><option value="lin">線性</option></select></div>
+   <div class="mut">將尾段淡入接返頭段，令循環播放接位冇爆音。結果會短咗「重疊長度」。</div>
+  </div>
+ </div>
+ <div class="row"><button class="s" id="bPreset">還原此音效位預設</button><span class="mut" id="resampleNote"></span></div>
+ </details>
+</section>
+
+<section class="card" id="sRes" aria-labelledby="h5" hidden>
+ <h2 id="h5">⑤ 結果</h2>
+ <div id="res" data-rev="0">
+  <canvas id="outWave" role="img" aria-label="轉換後波形"></canvas>
+  <div class="row"><label><input type="checkbox" id="prevLoop"> 循環播放 (試聽接位)</label></div>
+  <div class="kvs" id="kvs"></div>
+  <ul class="chk" id="checks"></ul>
+  <div class="mut" id="dlName"></div>
+  <div class="bar-act" id="resBar">
+   <button class="p" id="bPlayOut">▶ 播放結果</button>
+   <button class="g" id="bSave">存入音效包</button>
+   <button class="p" id="bDl">⬇ 下載 WAV</button>
+   <button id="bNext">→ 下一個音效位</button>
+  </div>
+ </div>
+</section>
+
+<section class="card" id="cTray" aria-labelledby="h6">
+ <h2 id="h6">我嘅音效包 <span class="mut" id="persistNote"></span></h2>
+ <div class="scroll"><table id="trayTab">
+  <thead><tr><th>音效</th><th>類型</th><th class="n">長度</th><th class="n">檔案大小</th><th class="n">音量</th><th>播放方式</th><th>來源檔</th><th>操作</th></tr></thead>
+  <tbody id="trayBody"></tbody>
+ </table></div>
+ <div class="kvs" id="trayStat"></div>
+ <div class="row">
+  <label for="cap">檔案系統總容量</label><input type="number" id="cap" inputmode="numeric" value="1920" min="256" max="16000" step="16"> KB
+  <span class="mut">抄網頁「音效」分頁顯示嘅總容量；預設 1920 KB 係 Arduino「No OTA (2MB APP/2MB SPIFFS)」方案嘅分區大小</span>
+ </div>
+ <div class="row">
+  <label for="ramKb">短音效 RAM 快取上限</label><input type="number" id="ramKb" inputmode="numeric" value="96" min="0" max="1024" step="8"> KB
+  <span class="mut">對應韌體 RAM_CACHE_BUDGET_BYTES，預設 96 KB，一般唔使改。放唔入 RAM 嘅音效會由 flash 串流，照常播放</span>
+ </div>
+ <div class="bar" id="capBar" aria-hidden="true"><i></i></div>
+ <ul class="chk" id="trayChecks"></ul>
+ <div class="row"><button class="g" id="bZip" disabled>⬇ 下載全部 (ZIP)</button><button id="bAlign" disabled>對齊各音效音量</button><button class="r" id="bClear" disabled>清除全部</button></div>
+ <details><summary>點樣上載去坦克</summary><ol style="margin:6px 0 0;padding-left:20px;color:#c9d1d9">
+  <li>下載 ZIP 並解壓 (每個檔已用音效位命名：engine.wav、fire.wav…)</li>
+  <li>手機連上坦克嘅 Wi-Fi (預設 Tank_Battle_Sound)，瀏覽器開 <b>http://192.168.4.1</b></li>
+  <li>去「音效」分頁，喺對應音效位撳「換檔」，揀返同名檔案</li>
+  <li>上載後狀態顯示 OK 就完成；顯示紅色會講明格式邊度唔啱，舊檔會保留</li></ol></details>
+</section>
+
+<section class="card">
+ <details>
+  <summary><b>規格同注意事項</b></summary>
+  <ul>
+   <li>ESP32 只接受 <b>WAV / PCM / 單聲道 / 16-bit / 22050 Hz</b>，檔案要細過 <b>1,500,000 bytes</b> (約 34 秒)；格式唔啱會被拒絕，舊檔會保留。</li>
+   <li><b>RAM 快取</b>：短音效會按 機槍 → 炮塔 → 升降 → 受擊 → 主炮 → 點火 → 熄匙 次序載入 RAM，合共上限 96 KB (約 2.2 秒)；放唔入嘅會由 flash 串流，可以正常播放。引擎檔一直由 flash 串流。</li>
+   <li><b>更換音效</b>：上載時新檔先寫入暫存，成功後先刪舊檔，所以空位要夠 「新檔大小 + 16 KB」。</li>
+   <li><b>引擎循環</b>：油門會令播放速度喺 0.65× 至 1.9× 之間變化，建議用中等轉速、音量穩定嘅錄音；頭尾要接得順。</li>
+   <li>重取樣用 Kaiser 窗 sinc 濾波：9 kHz 以下幾乎冇影響 (≤ 0.03 dB)，10 kHz 約 −1.7 dB，12 kHz 以上被濾走 (−42 dB 或更多)，避免混疊假聲。22050 Hz 取樣率本身只可以表達 11 kHz 以下嘅聲音。</li>
+   <li><b>自動保存</b>：音效包會自動保存喺呢部瀏覽器 (IndexedDB)，重新整理都仲喺度；清除瀏覽資料、私隱模式或者換瀏覽器就會冇，所以完成後仍然請下載 ZIP 做備份。</li><li><b>批量轉換</b>：一次揀多個檔，按檔名關鍵字配對 (機槍 → 炮塔 → 升降 → 引擎 → 點火 → 熄匙 → 受擊 → 主炮 次序判斷；檔名剛好係 engine、fire 等音效位名稱會優先)。配唔到或者重複嘅會等你手動揀音效位。批量一律用該音效位預設 (自動去頭尾靜音、標準化 −1 dBFS)。</li><li>本工具冇聲卡試聽功能以外嘅連線；最終請以坦克網頁「音效」分頁顯示 OK 為準。</li>
+  </ul>
+ </details>
+</section>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* ====================== 常數 ====================== */
+const $=id=>document.getElementById(id);
+const OUT_RATE=22050, MAX_BYTES=1500000, RESERVE=16384, BLOCK=4096;
+const COARSE=matchMedia('(pointer:coarse)').matches;
+const SLOTS=[
+ {id:'engine',label:'引擎 Loop',loop:true, rec:[3,6],  xf:250,fi:0,fo:0, note:'引擎循環聲：油門會令播放速度喺 0.65×~1.9× 之間變化，建議用中等轉速、音量穩定嘅錄音，頭尾要接得順。引擎檔一直由 flash 串流播放。'},
+ {id:'start', label:'點火',     loop:false,rec:[1,3],  xf:100,fi:2,fo:30,note:'點火：撳油門或手動點火時播放一次，播完先進入引擎循環。'},
+ {id:'stop',  label:'熄匙',     loop:false,rec:[1,3],  xf:100,fi:2,fo:30,note:'熄匙：閒置 10 秒或手動熄匙時播放一次。'},
+ {id:'fire',  label:'主炮',     loop:false,rec:[1,2],  xf:100,fi:2,fo:30,note:'主炮：每次開炮播放一次。'},
+ {id:'mg',    label:'機槍',     loop:true, rec:[0.5,1],xf:40, fi:0,fo:0, note:'機槍：撳住機槍掣時循環播放，放手淡出。'},
+ {id:'turret',label:'炮塔',     loop:true, rec:[0.5,1],xf:80, fi:0,fo:0, note:'炮塔：搖動炮塔時循環播放，停止時淡出。'},
+ {id:'elev',  label:'升降',     loop:true, rec:[0.5,1],xf:80, fi:0,fo:0, note:'炮管升降：搖動升降時循環播放，停止時淡出。'},
+ {id:'hit',   label:'受擊',     loop:false,rec:[0.5,1.5],xf:100,fi:2,fo:30,note:'受擊：被 IR 擊中時播放一次。'}
+];
+const CACHE_ORDER=['mg','turret','elev','hit','fire','start','stop'];   // 同韌體 loadSoundCache() 一致
+const slotById=id=>SLOTS.find(s=>s.id===id);
+const S={src:null,fileId:0,name:'',slot:'engine',sel:{a:0,b:0},view:{v0:0,v1:1},disp:null,A:{key:'',x:null},out:null,slots:{},play:null,rev:0,batch:[],busy:false};
+
+/* ====================== 小工具 ====================== */
+function num(id,def,lo,hi){let v=parseFloat($(id).value);if(!isFinite(v))v=def;return Math.min(hi,Math.max(lo,v));}
+const fmtT=s=>s.toFixed(3)+' 秒';
+const fmtB=b=>(b/1024).toFixed(1)+' KB ('+b.toLocaleString('en-US')+' bytes)';
+function toast(m){const e=$('toast');e.textContent=m;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2600);}
+function showErr(m){const e=$('err');e.textContent=m;e.hidden=false;}
+function clearErr(){$('err').hidden=true;$('err').textContent='';}
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e;}
+
+/* ====================== WAV 讀取 (支援 8/16/24/32-bit 整數同 32/64-bit 浮點) ====================== */
+function parseWavFile(ab){
+ if(ab.byteLength<12)return null;
+ const dv=new DataView(ab), len=ab.byteLength;
+ const tg=o=>String.fromCharCode(dv.getUint8(o),dv.getUint8(o+1),dv.getUint8(o+2),dv.getUint8(o+3));
+ if(tg(0)!=='RIFF'||tg(8)!=='WAVE')return null;
+ let p=12,fmt=null,off=-1,dlen=0;
+ while(p+8<=len){
+  const id=tg(p),sz=dv.getUint32(p+4,true),st=p+8;
+  if(id==='fmt '&&sz>=16&&st+16<=len){
+   fmt={tag:dv.getUint16(st,true),ch:dv.getUint16(st+2,true),rate:dv.getUint32(st+4,true),bits:dv.getUint16(st+14,true)};
+   if(fmt.tag===0xFFFE&&sz>=26&&st+26<=len)fmt.tag=dv.getUint16(st+24,true);
+  }else if(id==='data'&&off<0){
+   off=st;dlen=(sz===0||sz===0xFFFFFFFF)?len-st:Math.min(sz,len-st);
+  }
+  const nx=st+sz+(sz&1);
+  if(nx<=p||nx>len)break;
+  p=nx;
+ }
+ if(!fmt||off<0)return null;
+ const {tag,ch,rate,bits}=fmt;
+ if(!ch||ch>32||!rate)return null;
+ const okInt=tag===1&&(bits===8||bits===16||bits===24||bits===32), okFlt=tag===3&&(bits===32||bits===64);
+ if(!okInt&&!okFlt)return null;
+ const bps=bits>>3, frames=Math.floor(dlen/(bps*ch));
+ if(frames<1)return null;
+ const out=[];for(let c=0;c<ch;c++)out.push(new Float32Array(frames));
+ if(tag===1&&bits===16&&off%2===0){
+  const a=new Int16Array(ab,off,frames*ch);
+  for(let i=0,k=0;i<frames;i++)for(let c=0;c<ch;c++,k++)out[c][i]=a[k]/32768;
+ }else{
+  let q=off;
+  for(let i=0;i<frames;i++)for(let c=0;c<ch;c++,q+=bps){
+   let v;
+   if(tag===3)v=bits===32?dv.getFloat32(q,true):dv.getFloat64(q,true);
+   else if(bits===8)v=(dv.getUint8(q)-128)/128;
+   else if(bits===16)v=dv.getInt16(q,true)/32768;
+   else if(bits===24){let x=dv.getUint8(q)|(dv.getUint8(q+1)<<8)|(dv.getUint8(q+2)<<16);if(x&0x800000)x-=0x1000000;v=x/8388608;}
+   else v=dv.getInt32(q,true)/2147483648;
+   out[c][i]=v;
+  }
+ }
+ return {rate,channels:out,n:frames,how:'WAV ('+(tag===3?'浮點 ':'PCM ')+bits+'-bit)'};
+}
+async function decodeWithBrowser(ab){
+ const AC=window.AudioContext||window.webkitAudioContext;
+ if(!AC)throw new Error('呢個瀏覽器唔支援音訊解碼，請改用 WAV 檔，或者轉用較新嘅瀏覽器。');
+ let ctx;try{ctx=new AC({sampleRate:44100});}catch(e){ctx=new AC();}
+ try{
+  const buf=await new Promise((res,rej)=>{const p=ctx.decodeAudioData(ab.slice(0),res,rej);if(p&&p.catch)p.catch(rej);});
+  const chs=[];for(let c=0;c<buf.numberOfChannels;c++)chs.push(new Float32Array(buf.getChannelData(c)));
+  return {rate:buf.sampleRate,channels:chs,n:buf.length,how:'瀏覽器解碼'};
+ }finally{try{ctx.close();}catch(e){}}
+}
+
+/* ====================== DSP：單聲道 / 重取樣 / 處理 ====================== */
+const ZC=16,RES=1024,BETA=9;
+function bessel0(x){let s=1,t=1,k=1;const q=x*x/4;while(k<200){t*=q/(k*k);s+=t;if(t<1e-13*s)break;k++;}return s;}
+const KT=(()=>{const n=ZC*RES+2,t=new Float32Array(n),d=bessel0(BETA);for(let i=0;i<n;i++){const u=i/RES,r=u/ZC,w=r>=1?0:bessel0(BETA*Math.sqrt(1-r*r))/d,s=u===0?1:Math.sin(Math.PI*u)/(Math.PI*u);t[i]=s*w;}return t;})();
+function resPad(sr){const cut=Math.min(1,OUT_RATE/sr)*0.96;return Math.ceil(ZC/cut)+4;}
+function toMono(chs,from,to,mode){
+ const n=to-from,out=new Float32Array(n),c=chs.length;
+ let idx;if(mode==='L')idx=[0];else if(mode==='R')idx=[Math.min(1,c-1)];else{idx=[];for(let i=0;i<c;i++)idx.push(i);}
+ if(idx.length===1){out.set(chs[idx[0]].subarray(from,to));return out;}
+ const inv=1/idx.length;
+ for(let i=0;i<n;i++){let s=0;for(let k=0;k<idx.length;k++)s+=chs[idx[k]][from+i];out[i]=s*inv;}
+ return out;
+}
+function resample(x,sr,dr,start,nOut){
+ if(sr===dr)return x.slice(start,start+nOut);
+ const ratio=sr/dr,out=new Float32Array(nOut),n=x.length,cut=Math.min(1,dr/sr)*0.96,H=ZC/cut;
+ for(let j=0;j<nOut;j++){
+  const t=start+j*ratio;
+  let k0=Math.ceil(t-H),k1=Math.floor(t+H);if(k0<0)k0=0;if(k1>n-1)k1=n-1;
+  let acc=0,ws=0;
+  for(let k=k0;k<=k1;k++){
+   let u=(k-t)*cut;if(u<0)u=-u;
+   const f=u*RES,i=f|0,w=KT[i]+(KT[i+1]-KT[i])*(f-i);
+   acc+=w*x[k];ws+=w;
+  }
+  out[j]=ws!==0?acc/ws:0;
+ }
+ return out;
+}
+function processStage(x,p){
+ let y=new Float32Array(x);const N=y.length;
+ if(p.dc&&N){let m=0;for(let i=0;i<N;i++)m+=y[i];m/=N;for(let i=0;i<N;i++)y[i]-=m;}
+ if(p.gainDb){const g=Math.pow(10,p.gainDb/20);for(let i=0;i<N;i++)y[i]*=g;}
+ let X=0;
+ if(p.loopOn){
+  X=Math.min(Math.round(p.loopMs*OUT_RATE/1000),Math.floor(N/2));
+  if(X>=2){
+   const M=N-X,o=new Float32Array(M);o.set(y.subarray(0,M));
+   for(let k=0;k<X;k++){
+    const t=k/X;let wi,wo;
+    if(p.curve==='lin'){wi=t;wo=1-t;}else{wi=Math.sin(t*Math.PI/2);wo=Math.cos(t*Math.PI/2);}
+    o[k]=y[k]*wi+y[k+M]*wo;
+   }
+   y=o;
+  }else X=0;
+ }
+ const L=y.length;
+ const fi=Math.min(Math.round(p.fi*OUT_RATE/1000),L),fo=Math.min(Math.round(p.fo*OUT_RATE/1000),L);
+ for(let i=0;i<fi;i++)y[i]*=i/fi;
+ for(let i=0;i<fo;i++)y[L-1-i]*=i/fo;
+ let pk=0;for(let i=0;i<L;i++){const a=Math.abs(y[i]);if(a>pk)pk=a;}
+ if(p.normOn&&pk>1e-9){const g=Math.pow(10,p.normDb/20)/pk;for(let i=0;i<L;i++)y[i]*=g;}
+ return {y,X};
+}
+function quantize(y){
+ const n=y.length,pcm=new Int16Array(n);let clipped=0,pk=0,sq=0;
+ for(let i=0;i<n;i++){
+  let v=Math.round(y[i]*32767);
+  if(v>32767){v=32767;clipped++;}else if(v<-32768){v=-32768;clipped++;}
+  pcm[i]=v;const a=Math.abs(v);if(a>pk)pk=a;sq+=v*v;
+ }
+ return {pcm,clipped,peak:pk,rms:n?Math.sqrt(sq/n):0};
+}
+function seamOf(y){
+ const n=y.length;if(n<64)return {jump:0,ratio:0};
+ const jump=Math.abs(y[0]-y[n-1]),K=Math.min(200,(n>>1)-1);let s=0;
+ for(let i=0;i<K;i++){s+=Math.abs(y[n-1-i]-y[n-2-i]);s+=Math.abs(y[i+1]-y[i]);}
+ return {jump,ratio:jump/(s/(2*K)+1e-9)};
+}
+
+/* ====================== WAV 輸出 + 同韌體一樣嘅格式檢查 ====================== */
+function buildWav(pcm){
+ const dl=pcm.length*2,b=new ArrayBuffer(44+dl),v=new DataView(b);
+ const W=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+ W(0,'RIFF');v.setUint32(4,36+dl,true);W(8,'WAVE');W(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+ v.setUint32(24,OUT_RATE,true);v.setUint32(28,OUT_RATE*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);W(36,'data');v.setUint32(40,dl,true);
+ for(let i=0;i<pcm.length;i++)v.setInt16(44+i*2,pcm[i],true);
+ return new Uint8Array(b);
+}
+function checkWav(u8){   // 對應韌體 inspectWavCode()
+ const fsz=u8.length;if(fsz<44)return {ok:false,why:'檔案少過 44 bytes'};
+ const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength);
+ const tg=o=>String.fromCharCode(u8[o],u8[o+1],u8[o+2],u8[o+3]);
+ if(tg(0)!=='RIFF'||tg(8)!=='WAVE')return {ok:false,why:'唔係 WAV 檔'};
+ let p=12,fmt=null,data=null;
+ while(p+8<=fsz&&!(fmt&&data)){
+  const id=tg(p),sz=dv.getUint32(p+4,true),st=p+8;
+  if(id==='fmt '){if(sz<16||st+16>fsz)return {ok:false,why:'fmt 區塊損壞'};fmt={f:dv.getUint16(st,true),c:dv.getUint16(st+2,true),r:dv.getUint32(st+4,true),b:dv.getUint16(st+14,true)};}
+  else if(id==='data'){data={off:st,len:Math.min(sz,fsz-st)&~1};}
+  const nx=st+sz+(sz&1);if(nx>fsz)break;p=nx;
+ }
+ if(!fmt||!data)return {ok:false,why:'缺少 fmt 或 data 區塊'};
+ if(fmt.f!==1)return {ok:false,why:'唔係 PCM'};
+ if(fmt.c!==1)return {ok:false,why:'唔係單聲道'};
+ if(fmt.r!==OUT_RATE)return {ok:false,why:'取樣率唔係 22050 Hz'};
+ if(fmt.b!==16)return {ok:false,why:'唔係 16-bit'};
+ if(data.len<4)return {ok:false,why:'音訊資料太短'};
+ return {ok:true,len:data.len};
+}
+
+/* ====================== 載入檔案 ====================== */
+async function decodeFile(file){
+ const ab=await file.arrayBuffer();
+ if(ab.byteLength<2)throw new Error('檔案係空嘅。');
+ let src=parseWavFile(ab);
+ if(!src)src=await decodeWithBrowser(ab).catch(e=>{throw new Error('讀唔到呢個檔案：唔係瀏覽器支援嘅音訊格式 (或者檔案已損壞)。可以試吓轉成 WAV 或 MP3 再載入。');});
+ if(!src.channels.length||src.n<2)throw new Error('檔案入面冇可用嘅音訊。');
+ src.dur=src.n/src.rate;return src;
+}
+function monoAvg(src){const dsp=new Float32Array(src.n),c=src.channels.length,inv=1/c;for(let i=0;i<src.n;i++){let s=0;for(let k=0;k<c;k++)s+=src.channels[k][i];dsp[i]=s*inv;}return dsp;}
+function trimRange(x,sr,dur,thrDb){
+ const thr=Math.pow(10,thrDb/20),blk=Math.max(1,Math.round(sr/1000));
+ let first=-1,last=-1;
+ for(let i=0;i<x.length;i+=blk){let m=0;const e=Math.min(x.length,i+blk);for(let k=i;k<e;k++){const v=Math.abs(x[k]);if(v>m)m=v;}if(m>thr){if(first<0)first=i;last=e;}}
+ if(first<0)return null;
+ return {a:Math.max(0,first/sr-0.010),b:Math.min(dur,last/sr+0.020)};
+}
+async function loadFile(file){
+ if(!file)return;
+ clearErr();stopPlay();
+ $('fileInfo').textContent='讀取中…';
+ try{
+  const src=await decodeFile(file);
+  S.src=src;S.name=file.name;S.fileId++;S.A={key:'',x:null};
+  S.disp=monoAvg(src);S.sel={a:0,b:S.src.dur};S.view={v0:0,v1:S.src.dur};
+  let trimmed=false;if($('autoLoad').checked)trimmed=autoTrim();
+  $('fileInfo').textContent=file.name+'　·　'+src.rate+' Hz　·　'+src.channels.length+' 聲道　·　'+fmtT(S.src.dur)+'　·　'+src.how+(trimmed?'　·　已自動去除頭尾靜音':'');
+  ['sEdit','sSet','sRes'].forEach(i=>$(i).hidden=false);
+  $('resampleNote').textContent=src.rate===OUT_RATE?'取樣率已經係 22050 Hz，唔使重取樣。':'重取樣：'+src.rate+' Hz → 22050 Hz'+(src.rate>OUT_RATE?' (10 kHz 以上漸漸衰減，12 kHz 以上基本濾走，避免混疊假聲)':'');
+  syncSel();setView(0,S.src.dur);drawMain();schedule();
+ }catch(e){
+  $('fileInfo').textContent='';showErr(e.message||String(e));
+ }
+}
+function autoTrim(){const r=trimRange(S.disp,S.src.rate,S.src.dur,num('silDb',-45,-90,-6));if(!r)return false;S.sel=r;return true;}
+/* ====================== 剪輯：選區 / 波形 ====================== */
+function syncSel(){
+ if(document.activeElement!==$('tA'))$('tA').value=S.sel.a.toFixed(4);
+ if(document.activeElement!==$('tB'))$('tB').value=S.sel.b.toFixed(4);
+ $('selLen').textContent=fmtT(S.sel.b-S.sel.a);
+}
+function setSel(a,b){
+ if(!S.src)return;const d=S.src.dur,minL=Math.max(0.001,2/S.src.rate);
+ a=Math.min(Math.max(0,a),d);b=Math.min(Math.max(0,b),d);
+ if(b-a<minL){if(a+minL<=d)b=a+minL;else{b=d;a=d-minL;}}
+ S.sel={a,b};syncSel();drawMain();schedule();
+}
+function setView(v0,v1){
+ const d=S.src.dur,minSpan=Math.max(0.002,40/S.src.rate);
+ let span=Math.min(d,Math.max(minSpan,v1-v0));v0=Math.min(Math.max(0,v0),d-span);
+ S.view={v0,v1:v0+span};
+ const pan=$('pan');pan.hidden=span>=d-1e-9;if(!pan.hidden)pan.value=Math.round(v0/(d-span)*1000);
+ drawMain();
+}
+function fit(cv){
+ const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(!w||!h)return null;
+ const W=Math.round(w*dpr),H=Math.round(h*dpr);if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}
+ const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);return {c,w,h};
+}
+function ruler(c,w,h,v0,v1){
+ const span=v1-v0,raw=span/Math.max(1,w/80),steps=[0.001,0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10,30,60];
+ let st=steps.find(s=>s>=raw)||60;
+ c.font='11px sans-serif';c.fillStyle='#6e7681';c.strokeStyle='#222a31';c.lineWidth=1;
+ for(let t=Math.ceil(v0/st)*st;t<=v1;t+=st){const x=(t-v0)/span*w;c.beginPath();c.moveTo(x,0);c.lineTo(x,h-14);c.stroke();c.fillText(t.toFixed(st<0.01?3:st<0.1?2:st<1?1:0)+'s',x+3,h-3);}
+}
+function drawMain(){
+ const f=fit($('wave'));if(!f||!S.src)return;
+ const {c,w,h}=f,sr=S.src.rate,x=S.disp,n=x.length,{v0,v1}=S.view,span=v1-v0;
+ c.fillStyle='#0b0d0f';c.fillRect(0,0,w,h);
+ ruler(c,w,h,v0,v1);
+ const mid=(h-16)/2,amp=mid*0.92;
+ c.strokeStyle='#2c3138';c.beginPath();c.moveTo(0,mid);c.lineTo(w,mid);c.stroke();
+ c.fillStyle='#58a6ff';c.strokeStyle='#58a6ff';
+ if(span*sr<w){
+  c.beginPath();let first=true;
+  for(let k=Math.max(0,Math.floor(v0*sr)-1);k<Math.min(n,Math.ceil(v1*sr)+1);k++){const px=(k/sr-v0)/span*w,py=mid-x[k]*amp;if(first){c.moveTo(px,py);first=false;}else c.lineTo(px,py);}
+  c.stroke();
+ }else{
+  for(let px=0;px<w;px++){
+   let i0=Math.floor((v0+px/w*span)*sr),i1=Math.floor((v0+(px+1)/w*span)*sr);
+   if(i1<=i0)i1=i0+1;if(i0<0)i0=0;if(i1>n)i1=n;if(i0>=n)break;
+   let mn=1e9,mx=-1e9;for(let k=i0;k<i1;k++){const v=x[k];if(v<mn)mn=v;if(v>mx)mx=v;}
+   const y1=mid-mx*amp,y2=mid-mn*amp;c.fillRect(px,y1,1,Math.max(1,y2-y1));
+  }
+ }
+ const xa=(S.sel.a-v0)/span*w,xb=(S.sel.b-v0)/span*w;
+ c.fillStyle='rgba(0,0,0,.58)';
+ if(xa>0)c.fillRect(0,0,Math.min(w,xa),h-14);
+ if(xb<w)c.fillRect(Math.max(0,xb),0,w-Math.max(0,xb),h-14);
+ c.fillStyle='#ff9800';
+ for(const hx of [xa,xb]){if(hx<-4||hx>w+4)continue;const HW=COARSE?9:5,HH=COARSE?22:12;c.fillRect(hx-1,0,2,h-14);c.fillRect(hx-HW,0,HW*2,HH);c.fillRect(hx-HW,h-14-HH,HW*2,HH);}
+ const ph=playheadSrc();
+ if(ph!==null){const px=(ph-v0)/span*w;c.fillStyle='#fff';c.fillRect(px-0.5,0,1.5,h-14);}
+}
+function drawOut(){
+ const f=fit($('outWave'));if(!f)return;const {c,w,h}=f;
+ c.fillStyle='#0b0d0f';c.fillRect(0,0,w,h);
+ const o=S.out;if(!o){return;}
+ const pcm=o.pcm,n=pcm.length,mid=h/2,amp=mid*0.92;
+ c.strokeStyle='#2c3138';c.beginPath();c.moveTo(0,mid);c.lineTo(w,mid);c.stroke();
+ c.fillStyle=o.bad?'#f85149':'#3fb950';
+ for(let px=0;px<w;px++){
+  let i0=Math.floor(px/w*n),i1=Math.floor((px+1)/w*n);if(i1<=i0)i1=i0+1;if(i1>n)i1=n;if(i0>=n)break;
+  let mn=1e9,mx=-1e9;for(let k=i0;k<i1;k++){const v=pcm[k];if(v<mn)mn=v;if(v>mx)mx=v;}
+  const y1=mid-mx/32768*amp,y2=mid-mn/32768*amp;c.fillRect(px,y1,1,Math.max(1,y2-y1));
+ }
+ if(S.play&&S.play.kind==='out'){const px=S.play.pos/o.dur*w;c.fillStyle='#fff';c.fillRect(px-0.5,0,1.5,h);}
+}
+const GRAB=()=>(matchMedia('(pointer:coarse)').matches?28:12);
+(function wavePointer(){
+ const cv=$('wave');let drag=null,prev=null,anchor=0;
+ const tAt=e=>{const r=cv.getBoundingClientRect();return S.view.v0+(e.clientX-r.left)/r.width*(S.view.v1-S.view.v0);};
+ const pxPer=()=>cv.getBoundingClientRect().width/(S.view.v1-S.view.v0);
+ cv.addEventListener('pointerdown',e=>{
+  if(!S.src)return;cv.setPointerCapture(e.pointerId);
+  const t=tAt(e),k=pxPer(),da=Math.abs(t-S.sel.a)*k,db=Math.abs(t-S.sel.b)*k;
+  prev={a:S.sel.a,b:S.sel.b};
+  if(Math.min(da,db)<=GRAB())drag=da<=db?'a':'b';else{drag='new';anchor=t;}
+  prev.x0=e.clientX;
+ });
+ cv.addEventListener('pointermove',e=>{
+  if(!S.src)return;
+  if(!drag){const t=tAt(e),k=pxPer();cv.style.cursor=Math.min(Math.abs(t-S.sel.a),Math.abs(t-S.sel.b))*k<=GRAB()?'ew-resize':'crosshair';return;}
+  const t=tAt(e);
+  if(drag==='a')setSel(Math.min(t,S.sel.b-0.001),S.sel.b);
+  else if(drag==='b')setSel(S.sel.a,Math.max(t,S.sel.a+0.001));
+  else setSel(Math.min(anchor,t),Math.max(anchor,t));
+ });
+ const end=e=>{if(!drag)return;if(drag==='new'&&Math.abs(e.clientX-prev.x0)<4)setSel(prev.a,prev.b);drag=null;};
+ cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+ cv.addEventListener('wheel',e=>{
+  if(!S.src)return;e.preventDefault();
+  const f=e.deltaY<0?0.8:1.25,tc=tAt(e),{v0,v1}=S.view;
+  setView(tc-(tc-v0)*f,tc+(v1-tc)*f);
+ },{passive:false});
+})();
+
+/* ====================== 轉換流程 ====================== */
+let schedT=0;
+function schedule(){clearTimeout(schedT);schedT=setTimeout(run,70);updSetSum();}
+function readParams(){
+ return {dc:$('dcOn').checked,gainDb:num('gain',0,-30,30),normOn:$('normOn').checked,normDb:num('normDb',-1,-24,0),
+  fi:num('fi',0,0,2000),fo:num('fo',0,0,2000),loopOn:$('loopOn').checked,loopMs:num('loopMs',100,5,3000),curve:$('curve').value};
+}
+function presetParams(s){return {dc:true,gainDb:0,normOn:true,normDb:-1,fi:s.fi,fo:s.fo,loopOn:s.loop,loopMs:s.xf,curve:'eq'};}
+function updSetSum(){const p=readParams();$('setSum').textContent=(p.normOn?'標準化 '+p.normDb+' dBFS':'唔標準化')+' · 增益 '+p.gainDb+' dB · 淡入 '+p.fi+' / 淡出 '+p.fo+' ms · '+(p.loopOn?'循環接駁 '+p.loopMs+' ms':'冇循環接駁');}
+const ramBudget=()=>Math.round(num('ramKb',96,0,1024)*1024);
+function selSamples(src,a,b){const sr=src.rate,n=src.n,s0=Math.max(0,Math.round(a*sr)),s1=Math.min(n,Math.round(b*sr));return {s0,s1,nOut:Math.round((s1-s0)*OUT_RATE/sr)};}
+function resampleSel(src,s0,s1,nOut,mix){
+ const sr=src.rate,n=src.n,pad=sr===OUT_RATE?0:resPad(sr),from=Math.max(0,s0-pad),to=Math.min(n,s1+pad);
+ return resample(toMono(src.channels,from,to,mix),sr,OUT_RATE,s0-from,nOut);
+}
+function finishOutput(x,p,slotId,slots){
+ const r=processStage(x,p),q=quantize(r.y),wav=buildWav(q.pcm);
+ const o={y:r.y,pcm:q.pcm,wav,X:r.X,dur:q.pcm.length/OUT_RATE,bytes:wav.length,clipped:q.clipped,peak:q.peak,rms:q.rms,seam:seamOf(r.y),slot:slotId};
+ o.checks=buildChecks(o,slotById(slotId),slots,p.loopOn);o.bad=o.checks.some(c=>c.st==='bad');
+ return o;
+}
+function run(){
+ if(!S.src)return;
+ const {s0,s1,nOut}=selSamples(S.src,S.sel.a,S.sel.b);
+ S.tooLong=nOut>OUT_RATE*180;
+ if(S.tooLong){S.out=null;renderOut();return;}   // 超過 3 分鐘：唔做運算，避免頁面卡死
+ if(s1-s0<2||nOut<2){S.out=null;renderOut();return;}
+ const mix=$('mix').value,key=[S.fileId,s0,s1,mix].join('|');
+ if(S.A.key!==key)S.A={key,x:resampleSel(S.src,s0,s1,nOut,mix)};
+ S.out=finishOutput(S.A.x,readParams(),S.slot,S.slots);renderOut();
+}
+function estimateCache(slots){
+ let used=0;const map={},B=ramBudget();
+ for(const id of CACHE_ORDER){const s=slots[id];if(!s){map[id]=null;continue;}const len=s.pcm.length*2;if(len>0&&used+len<=B){map[id]='ram';used+=len;}else map[id]='flash';}
+ map.engine=slots.engine?'flash':null;
+ return {map,used};
+}
+function buildChecks(o,slot,slots,loopOn){
+ const L=[],add=(st,t,fix)=>L.push({st,t,fix});
+ const wv=checkWav(o.wav),maxT=Math.floor(((MAX_BYTES-44)/(OUT_RATE*2)-0.05)*10)/10,xs=o.X/OUT_RATE;   // 例如 33.9 秒：label 同實際剪嘅長度一致
+ add(wv.ok?'ok':'bad',wv.ok?'格式正確：WAV · PCM · 單聲道 · 16-bit · 22050 Hz (用 ESP32 韌體同一套規則驗證)':'格式驗證失敗：'+wv.why);
+ if(o.bytes>MAX_BYTES)add('bad','檔案 '+(o.bytes/1024).toFixed(1)+' KB 超過 1,500,000 bytes 上限，ESP32 會拒絕上載。請剪短選區 (約 '+(MAX_BYTES/44100).toFixed(0)+' 秒內)。',{label:'剪到 '+maxT.toFixed(1)+' 秒',fn:()=>setSel(S.sel.a,S.sel.a+maxT+xs)});
+ else add('ok','檔案大小 '+(o.bytes/1024).toFixed(1)+' KB，喺 1,500,000 bytes 上限之內。');
+ if(o.peak<4)add('bad','成段都係靜音 (或者音量低到聽唔到)，請檢查選區同增益。');
+ else if(o.clipped>0)add('warn','有 '+o.clipped+' 個 sample 超出範圍被削平 (會有破音)。請降低增益，或者開啟標準化。');
+ else{const pdb=20*Math.log10(o.peak/32767);add(pdb<-20?'warn':'ok','峰值 '+pdb.toFixed(1)+' dBFS'+(pdb<-20?'：音量偏細，建議開啟標準化。':'。'));}
+ const d=o.dur,[rmin,rmax]=slot.rec;
+ if(d<0.05)add('warn','只有 '+(d*1000).toFixed(0)+' ms，好短。');
+ else if(slot.loop&&d<0.3)add('warn','循環音效得 '+d.toFixed(2)+' 秒，循環時會聽落似嗡嗡聲，建議 ≥ '+rmin+' 秒。');
+ else if(d>rmax*1.5)add('warn','長度 '+d.toFixed(2)+' 秒，比建議 ('+rmin+'~'+rmax+' 秒) 長，會佔多啲空間'+(slot.id==='engine'?'。':'，亦較難放入 RAM 快取。'),{label:'剪到 '+rmax+' 秒',fn:()=>setSel(S.sel.a,S.sel.a+rmax+xs)});
+ else add('ok','長度 '+d.toFixed(2)+' 秒 (建議 '+rmin+'~'+rmax+' 秒)。');
+ if(slot.id==='engine')add('ok','引擎檔一直由 flash 串流播放，唔佔 RAM 快取。');
+ else{
+  const tmp=Object.assign({},slots);tmp[slot.id]={pcm:o.pcm};const est=estimateCache(tmp),B=ramBudget();
+  if(est.map[slot.id]==='ram')add('ok','會載入 RAM 快取 (播放時唔使讀 flash)；短音效已用 '+(est.used/1024).toFixed(1)+' / '+(B/1024).toFixed(0)+' KB。');
+  else add('info','呢個音效會由 flash 串流播放 (RAM 快取 '+(B/1024).toFixed(0)+' KB 已滿)：照常播放，唔使處理，只係讀 flash 多啲。想放入 RAM 可以縮短音效。');
+ }
+ if(slot.loop||loopOn){
+  const s=o.seam;
+  if(s.jump>0.02&&s.ratio>3)add('warn','循環接位有跳變 (頭尾落差 '+(s.jump*100).toFixed(1)+'% 滿幅)，循環時會「啪」一聲。建議開啟無縫循環接駁，或者移動剪裁點。');
+  else add('ok','循環接位平順 (頭尾落差 '+(s.jump*100).toFixed(2)+'% 滿幅)。');
+ }
+ return L;
+}
+const IC={ok:'✓',warn:'⚠',bad:'✗',info:'ℹ'};
+function nextSlot(){const i=SLOTS.findIndex(s=>s.id===S.slot);for(let k=1;k<=SLOTS.length;k++){const s=SLOTS[(i+k)%SLOTS.length];if(!S.slots[s.id]&&s.id!==S.slot)return s;}return null;}
+function updNext(){const n=nextSlot(),b=$('bNext');b.disabled=!n;b.textContent=n?'→ 下一個：'+n.label:'音效位已齊';}
+function renderOut(){
+ const o=S.out;$('res').dataset.rev=String(++S.rev);
+ const sl=slotById(S.slot),have=!!S.slots[S.slot];
+ $('bSave').textContent=(have?'更新':'存入')+'「'+sl.label+'」';
+ $('dlName').textContent='下載檔名：'+S.slot+'.wav';
+ updNext();
+ if(!o){$('kvs').innerHTML='';$('checks').innerHTML='';const li=el('li','bad');li.append(el('span','ic','✗'),el('span','tx',S.tooLong?'選區超過 3 分鐘，遠超 1,500,000 bytes (約 34 秒) 上限。請先拉窄選區。':'選區太短，請拉闊選區。'));$('checks').append(li);$('bSave').disabled=true;$('bDl').disabled=true;drawOut();return;}
+ const kv=[['長度',fmtT(o.dur)],['取樣數',o.pcm.length.toLocaleString('en-US')],['檔案大小',(o.bytes/1024).toFixed(1)+' KB'],['峰值',o.peak?(20*Math.log10(o.peak/32767)).toFixed(1)+' dBFS':'—'],['平均音量 (RMS)',o.rms?(20*Math.log10(o.rms/32767)).toFixed(1)+' dBFS':'—'],['削波',String(o.clipped)+' 個']];
+ const k=$('kvs');k.innerHTML='';for(const [a,b] of kv){const d=el('div');d.append(el('span','mut',a),el('b','',b));k.append(d);}
+ const ul=$('checks');ul.innerHTML='';
+ for(const c of o.checks){const li=el('li',c.st);li.append(el('span','ic',IC[c.st]),el('span','tx',c.t));if(c.fix){const b=el('button','s',c.fix.label);b.addEventListener('click',c.fix.fn);li.append(b);}ul.append(li);}
+ $('bSave').disabled=o.bad;$('bDl').disabled=o.bad;
+ drawOut();
+}
+/* ====================== 試聽 ====================== */
+let actx=null,raf=0;
+function ensureCtx(){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw new Error('呢個瀏覽器唔支援試聽');if(!actx)actx=new AC();if(actx.state==='suspended')actx.resume();return actx;}
+function pcmBuffer(pcm){const b=ensureCtx().createBuffer(1,pcm.length,OUT_RATE),d=b.getChannelData(0);for(let i=0;i<pcm.length;i++)d[i]=pcm[i]/32768;return b;}
+function startPlay(kind,buf,loop,extra){
+ stopPlay();const c=ensureCtx(),node=c.createBufferSource();node.buffer=buf;node.loop=loop;node.connect(c.destination);
+ S.play=Object.assign({kind,node,t0:c.currentTime,dur:buf.duration,loop,pos:0},extra||{});
+ node.onended=()=>{if(S.play&&S.play.node===node)stopPlay();};
+ node.start();uiPlay();tickPlay();
+}
+function stopPlay(){
+ if(S.play){const n=S.play.node;n.onended=null;try{n.stop();}catch(e){}try{n.disconnect();}catch(e){}S.play=null;}
+ cancelAnimationFrame(raf);uiPlay();if(S.src)drawMain();drawOut();$('posRead').textContent='';
+}
+function tickPlay(){
+ if(!S.play)return;
+ const el_=actx.currentTime-S.play.t0;S.play.pos=S.play.loop?el_%S.play.dur:Math.min(el_,S.play.dur);
+ $('posRead').textContent='播放中 '+S.play.pos.toFixed(2)+' / '+S.play.dur.toFixed(2)+' 秒';
+ if(S.src)drawMain();drawOut();raf=requestAnimationFrame(tickPlay);
+}
+function playheadSrc(){return S.play&&S.play.kind==='src'?S.sel.a+S.play.pos:null;}
+function uiPlay(){
+ const k=S.play?S.play.kind:'';
+ $('bPlaySrc').textContent=k==='src'?'■ 停止播放':'▶ 播放選區';
+ $('bPlayOut').textContent=k==='out'?'■ 停止播放':'▶ 播放結果';
+ document.querySelectorAll('[data-prev]').forEach(b=>{b.textContent=(k==='tray:'+b.dataset.prev)?'■':'▶';});
+}
+function playSrc(){
+ if(S.play&&S.play.kind==='src'){stopPlay();return;}
+ if(!S.src)return;
+ try{
+  const sr=S.src.rate,s0=Math.round(S.sel.a*sr),s1=Math.round(S.sel.b*sr),mono=toMono(S.src.channels,s0,s1,$('mix').value);
+  let buf;
+  try{buf=ensureCtx().createBuffer(1,mono.length,sr);buf.getChannelData(0).set(mono);}
+  catch(e){const r=resample(mono,sr,44100,0,Math.round(mono.length*44100/sr));buf=ensureCtx().createBuffer(1,r.length,44100);buf.getChannelData(0).set(r);}
+  startPlay('src',buf,false);
+ }catch(e){showErr(e.message);}
+}
+function playOut(){
+ if(S.play&&S.play.kind==='out'){stopPlay();return;}
+ if(!S.out)return;
+ try{startPlay('out',pcmBuffer(S.out.pcm),$('prevLoop').checked);}catch(e){showErr(e.message);}
+}
+function playSlot(id){
+ if(S.play&&S.play.kind==='tray:'+id){stopPlay();return;}
+ const d=S.slots[id];if(!d)return;
+ try{startPlay('tray:'+id,pcmBuffer(d.pcm),false);}catch(e){showErr(e.message);}
+}
+
+/* ====================== 下載 / ZIP ====================== */
+function download(name,bytes,mime){
+ const url=URL.createObjectURL(new Blob([bytes],{type:mime}));const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);
+}
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=(c>>>8)^CRC_T[(c^u8[i])&255];return(c^0xFFFFFFFF)>>>0;}
+function makeZip(files){
+ const enc=new TextEncoder(),parts=[],cd=[];let off=0;
+ for(const f of files){
+  const nm=enc.encode(f.name),data=f.bytes,crc=crc32(data);
+  const lh=new Uint8Array(30+nm.length),v=new DataView(lh.buffer);
+  v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,0x0800,true);v.setUint16(8,0,true);v.setUint16(10,0,true);v.setUint16(12,0x21,true);
+  v.setUint32(14,crc,true);v.setUint32(18,data.length,true);v.setUint32(22,data.length,true);v.setUint16(26,nm.length,true);v.setUint16(28,0,true);lh.set(nm,30);
+  const ch=new Uint8Array(46+nm.length),w=new DataView(ch.buffer);
+  w.setUint32(0,0x02014b50,true);w.setUint16(4,20,true);w.setUint16(6,20,true);w.setUint16(8,0x0800,true);w.setUint16(10,0,true);w.setUint16(12,0,true);w.setUint16(14,0x21,true);
+  w.setUint32(16,crc,true);w.setUint32(20,data.length,true);w.setUint32(24,data.length,true);w.setUint16(28,nm.length,true);w.setUint32(42,off,true);ch.set(nm,46);
+  parts.push(lh,data);cd.push(ch);off+=lh.length+data.length;
+ }
+ let cdSize=0;for(const c of cd)cdSize+=c.length;
+ const e=new Uint8Array(22),ev=new DataView(e.buffer);
+ ev.setUint32(0,0x06054b50,true);ev.setUint16(8,files.length,true);ev.setUint16(10,files.length,true);ev.setUint32(12,cdSize,true);ev.setUint32(16,off,true);
+ return new Blob(parts.concat(cd,[e]),{type:'application/zip'});
+}
+
+/* ====================== 自動保存 (IndexedDB) ====================== */
+const DB={ok:false,db:null,p:null};
+function dbOpen(){return new Promise(res=>{try{const r=indexedDB.open('tank-sound-pack',1);r.onupgradeneeded=()=>r.result.createObjectStore('slots',{keyPath:'id'});r.onsuccess=()=>{DB.db=r.result;DB.ok=true;res(true);};r.onerror=()=>res(false);r.onblocked=()=>res(false);}catch(e){res(false);}});}
+const dbInit=()=>DB.p||(DB.p=dbOpen());
+async function dbTx(mode,fn){await dbInit();if(!DB.ok)return false;return new Promise(res=>{try{const t=DB.db.transaction('slots',mode);fn(t.objectStore('slots'));t.oncomplete=()=>res(true);t.onerror=t.onabort=()=>res(false);}catch(e){res(false);}});}
+const dbPut=(id,d)=>dbTx('readwrite',st=>st.put({id,wav:d.wav,name:d.name,dur:d.dur,t:Date.now()}));
+const dbDel=id=>dbTx('readwrite',st=>st.delete(id));
+const dbClear=()=>dbTx('readwrite',st=>st.clear());
+async function dbAll(){await dbInit();if(!DB.ok)return [];return new Promise(res=>{try{const r=DB.db.transaction('slots').objectStore('slots').getAll();r.onsuccess=()=>res(r.result||[]);r.onerror=()=>res([]);}catch(e){res([]);}});}
+function slotFromWav(wav,name,dur){return {wav,pcm:new Int16Array(wav.buffer.slice(wav.byteOffset+44,wav.byteOffset+wav.byteLength)),dur,name};}
+async function restore(){
+ const ok=await dbInit();let n=0;
+ if(ok){for(const r of await dbAll()){
+  const s=slotById(r.id);if(!s||S.slots[r.id])continue;
+  const w=r.wav instanceof Uint8Array?r.wav:new Uint8Array(r.wav||0);
+  if(!checkWav(w).ok)continue;
+  S.slots[r.id]=slotFromWav(w,r.name||'(已保存)',r.dur||(w.length-44)/2/OUT_RATE);n++;
+ }}
+ $('persistNote').textContent=ok?'(自動保存喺呢部瀏覽器；下載 ZIP 先係備份)':'(呢個瀏覽器唔支援自動保存：重新整理會清除，請先下載)';
+ if(n)toast('已還原上次保存嘅 '+n+' 個音效');
+ renderTray();if(S.out)run();
+}
+/* ====================== 音效包 ====================== */
+function fsUsedEst(){let u=0;for(const s of SLOTS){const d=S.slots[s.id];if(d)u+=Math.ceil(d.wav.length/(BLOCK-8))*BLOCK;}return u;}
+function lv(d){
+ if(!d.lv){let pk=0,sq=0;const p=d.pcm;for(let i=0;i<p.length;i++){const v=p[i],a=v<0?-v:v;if(a>pk)pk=a;sq+=v*v;}
+  d.lv={pk:pk?20*Math.log10(pk/32767):-99,rms:p.length&&sq?20*Math.log10(Math.sqrt(sq/p.length)/32767):-99};}
+ return d.lv;
+}
+function setSlot(id,d){S.slots[id]=d;return dbPut(id,d);}
+function renderTray(){
+ const est=estimateCache(S.slots),body=$('trayBody'),B=ramBudget();body.innerHTML='';
+ let total=0,count=0,maxSize=0;
+ const cell=(cls,txt,label)=>{const td=el('td',cls,txt);if(label)td.dataset.label=label;return td;};
+ for(const s of SLOTS){
+  const d=S.slots[s.id],tr=el('tr',d?'':'empty');
+  tr.append(cell('nm',s.label),cell('',s.loop?'循環':'單次','類型'));
+  if(!d){const td=cell('mut em','— 未加入');td.colSpan=6;tr.append(td);body.append(tr);continue;}
+  count++;total+=d.wav.length;if(d.wav.length>maxSize)maxSize=d.wav.length;
+  const L=lv(d),m=est.map[s.id];
+  tr.append(cell('n',d.dur.toFixed(2)+' 秒','長度'),cell('n',(d.wav.length/1024).toFixed(1)+' KB','檔案大小'),cell('n','峰 '+L.pk.toFixed(1)+' · 均 '+L.rms.toFixed(1)+' dB','音量'));
+  const pl=cell('','','播放方式');pl.append(el('span','pill '+(m==='ram'?'ok':'info'),m==='ram'?'RAM 快取':'flash 串流'));tr.append(pl);
+  tr.append(cell('mut',d.name,'來源檔'));
+  const ac=el('td','ops'),b1=el('button','s','▶');b1.dataset.prev=s.id;b1.setAttribute('aria-label','試聽 '+s.label);b1.addEventListener('click',()=>playSlot(s.id));
+  const b2=el('button','s','⬇');b2.setAttribute('aria-label','下載 '+s.label);b2.addEventListener('click',()=>download(s.id+'.wav',d.wav,'audio/wav'));
+  const b3=el('button','s r','✕');b3.setAttribute('aria-label','移除 '+s.label);b3.addEventListener('click',()=>{if(S.play&&S.play.kind==='tray:'+s.id)stopPlay();delete S.slots[s.id];dbDel(s.id);renderTray();if(S.out)run();});
+  ac.append(b1,' ',b2,' ',b3);tr.append(ac);body.append(tr);
+ }
+ const capB=num('cap',1920,256,16000)*1024,used=fsUsedEst(),usable=capB-RESERVE;
+ const st=$('trayStat');st.innerHTML='';
+ for(const [a,b] of [['已加入',count+' / 8 個'],['檔案總大小',(total/1024).toFixed(1)+' KB'],['估算佔用',(used/1024).toFixed(0)+' / '+(capB/1024).toFixed(0)+' KB'],['短音效 RAM 快取',(est.used/1024).toFixed(1)+' / '+(B/1024).toFixed(0)+' KB']]){const d=el('div');d.append(el('span','mut',a),el('b','',b));st.append(d);}
+ const bar=$('capBar');bar.className='bar'+(used>usable?' over':'');bar.firstElementChild.style.width=Math.min(100,used/capB*100)+'%';
+ const ul=$('trayChecks');ul.innerHTML='';
+ const add=(c,t)=>{const li=el('li',c);li.append(el('span','ic',IC[c]),el('span','tx',t));ul.append(li);};
+ if(count===0)add('ok','未有音效。完成每個音效位嘅轉換後，撳「存入音效包」；或者一次揀多個檔案批量轉換。');
+ else{
+  if(used>usable)add('bad','估算佔用 '+(used/1024).toFixed(0)+' KB 超過可用空間 ('+(usable/1024).toFixed(0)+' KB = 總容量減 16 KB)，放唔晒。請縮短音效 (尤其係引擎檔)。');
+  else add('ok','估算佔用 '+(used/1024).toFixed(0)+' KB，仍有約 '+((usable-used)/1024).toFixed(0)+' KB 可用 (已預留 16 KB)。');
+  const need=maxSize+RESERVE;
+  add(used>capB-need?'warn':'ok','更換最大嗰個檔 (約 '+(maxSize/1024).toFixed(0)+' KB) 時，上載期間新舊檔同時存在，需要至少 '+(need/1024).toFixed(0)+' KB 空位'+(used>capB-need?'：現時唔夠，建議先喺網頁刪除舊檔再上載。':'。'));
+  const lvl=SLOTS.filter(s=>s.id!=='engine'&&S.slots[s.id]).map(s=>({s,r:lv(S.slots[s.id]).rms}));
+  if(lvl.length>=2){lvl.sort((a,b)=>a.r-b.r);const lo=lvl[0],hi=lvl[lvl.length-1];
+   if(hi.r-lo.r>12)add('warn','各音效平均音量相差 '+(hi.r-lo.r).toFixed(0)+' dB (最大聲：'+hi.s.label+'，最細聲：'+lo.s.label+')，聽落會好唔平均。可以撳「對齊各音效音量」。');}
+  const miss=SLOTS.filter(s=>!S.slots[s.id]).map(s=>s.label);
+  if(miss.length)add('warn','仲未有：'+miss.join('、')+'。冇嘅音效位會喺坦克上冇聲 (網頁「音效」分頁會顯示「缺少檔案」)。');
+ }
+ $('bZip').disabled=count===0;$('bClear').disabled=count===0;$('bAlign').disabled=SLOTS.filter(s=>s.id!=='engine'&&S.slots[s.id]).length<2;
+ SLOTS.forEach(s=>{const i=document.querySelector('#chips input[value="'+s.id+'"]');if(i)i.nextElementSibling.querySelector('i').textContent=S.slots[s.id]?' ✓':'';});
+ $('packPill').textContent='音效包 '+count+'/8';
+ updNext();uiPlay();
+}
+function saveSlot(){
+ if(!S.out||S.out.bad)return;
+ const o=S.out;setSlot(S.slot,{wav:o.wav,pcm:o.pcm,dur:o.dur,name:S.name});
+ renderTray();run();toast('已存入「'+slotById(S.slot).label+'」');
+}
+function alignLevels(){
+ const ids=SLOTS.map(s=>s.id).filter(id=>id!=='engine'&&S.slots[id]);
+ if(ids.length<2){toast('起碼要有兩個非引擎音效先可以對齊');return;}
+ const rr=ids.map(id=>lv(S.slots[id]).rms).sort((a,b)=>a-b),target=rr[Math.floor((rr.length-1)/2)];let n=0;
+ for(const id of ids){
+  const d=S.slots[id],L=lv(d);let g=target-L.rms;const room=-1-L.pk;if(g>room)g=room;if(Math.abs(g)<0.5)continue;
+  const k=Math.pow(10,g/20),p=d.pcm,np=new Int16Array(p.length);
+  for(let i=0;i<p.length;i++){let v=Math.round(p[i]*k);if(v>32767)v=32767;else if(v<-32768)v=-32768;np[i]=v;}
+  setSlot(id,{wav:buildWav(np),pcm:np,dur:d.dur,name:d.name});n++;
+ }
+ renderTray();toast('已對齊 '+n+' 個音效嘅平均音量 (目標約 '+target.toFixed(1)+' dBFS；峰值唔會超過 −1 dBFS)');
+}
+/* ====================== 批量轉換 ====================== */
+const kw=(a,c)=>new RegExp('(?:^|[^a-z])(?:'+a+')(?![a-z])'+(c?'|'+c:''),'i');
+const SLOT_RX=[
+ ['mg',kw('mg|mgun|machine[ _-]?gun|machine','機槍|機關槍')],
+ ['turret',kw('turret|rotat\\w*','炮塔|旋轉')],
+ ['elev',kw('elev\\w*|barrel|gun[ _-]?lift','升降|炮管')],
+ ['engine',kw('engine|motor|idle','引擎|馬達|怠速')],
+ ['start',kw('start\\w*|ignit\\w*','點火|啟動')],
+ ['stop',kw('stop|shut\\w*','熄匙|熄火')],
+ ['hit',kw('hit|damage\\w*|impact','受擊|中彈|被擊')],
+ ['fire',kw('fire|cannon|main[ _-]?gun|shot|shell','主炮|開炮|大炮|炮擊')]];
+function guessSlot(name){
+ const base=name.replace(/\.[^.]*$/,''),ex=SLOTS.find(s=>s.id===base.toLowerCase());if(ex)return ex.id;
+ for(const [id,rx] of SLOT_RX)if(rx.test(base))return id;return null;
+}
+async function processItem(it,slotId){
+ it.slot=slotId;it.state='';it.msg='處理中…';
+ try{
+  const src=await decodeFile(it.file),x=monoAvg(src),tr=trimRange(x,src.rate,src.dur,num('silDb',-45,-90,-6))||{a:0,b:src.dur};
+  const {s0,s1,nOut}=selSamples(src,tr.a,tr.b);
+  if(nOut>OUT_RATE*180)throw new Error('檔案太長 (超過 3 分鐘)：請用編輯模式剪短。');
+  if(s1-s0<2||nOut<2)throw new Error('可用聲音太短。');
+  const sl=slotById(slotId),o=finishOutput(resampleSel(src,s0,s1,nOut,'avg'),presetParams(sl),slotId,S.slots);
+  const bad=o.checks.find(c=>c.st==='bad'),warn=o.checks.find(c=>c.st==='warn');
+  if(bad){it.state='bad';it.msg=bad.t;return;}
+  const had=!!S.slots[slotId];await setSlot(slotId,{wav:o.wav,pcm:o.pcm,dur:o.dur,name:it.file.name});
+  it.state=warn?'warn':'ok';it.msg='→ '+sl.label+' · '+o.dur.toFixed(2)+' 秒 · '+(o.bytes/1024).toFixed(1)+' KB'+(had?' · 已取代舊檔':'')+(warn?' · '+warn.t:'');
+ }catch(e){it.state='bad';it.msg=e.message||String(e);}
+}
+function selectSlot(id){const r=document.querySelector('#chips input[value="'+id+'"]');if(!r)return;r.checked=true;r.dispatchEvent(new Event('change',{bubbles:true}));}
+function editItem(it){selectSlot(it.slot||S.slot);loadFile(it.file);$('sEdit').scrollIntoView({block:'start'});}
+async function assignItem(it,slotId){
+ if(!slotId){toast('請先揀音效位');return;}if(S.busy){toast('處理緊，請稍等');return;}
+ S.busy=true;await processItem(it,slotId);S.busy=false;renderBatch();renderTray();
+}
+function renderBatch(){
+ const ul=$('batchList');ul.innerHTML='';let ok=0,bad=0,wait=0;
+ S.batch.forEach(it=>{
+  const st=it.state==='wait'?'info':(it.state||'info');
+  if(it.state==='ok'||it.state==='warn')ok++;else if(it.state==='bad')bad++;else if(it.state==='wait')wait++;
+  const li=el('li',st);li.append(el('span','ic',IC[st]));
+  const box=el('div','tx');box.append(el('b','',it.file.name),el('div','mut',it.msg||''));li.append(box);
+  if(it.state==='wait'){
+   const sel=el('select');sel.setAttribute('aria-label','為 '+it.file.name+' 揀音效位');
+   sel.append(new Option('— 揀音效位 —',''));SLOTS.forEach(s=>sel.append(new Option(s.label,s.id)));
+   const b=el('button','s g','加入');b.addEventListener('click',()=>assignItem(it,sel.value));li.append(sel,b);
+  }
+  const e=el('button','s','編輯');e.setAttribute('aria-label','編輯 '+it.file.name);e.addEventListener('click',()=>editItem(it));li.append(e);
+  ul.append(li);
+ });
+ $('batchSum').textContent='(成功 '+ok+' / 失敗 '+bad+' / 待指定 '+wait+')';
+}
+async function runBatch(files){
+ if(S.busy){toast('處理緊，請稍等');return;}
+ S.busy=true;stopPlay();clearErr();
+ const items=files.map(f=>({file:f,slot:guessSlot(f.name),state:'',msg:''})),seen={};
+ for(const it of items){if(it.slot){if(seen[it.slot]){it.dup=it.slot;it.slot=null;}else seen[it.slot]=1;}}
+ for(const it of items)if(!it.slot){it.state='wait';it.msg=it.dup?'已有另一個檔案配對咗「'+slotById(it.dup).label+'」，請手動揀音效位':'未能由檔名判斷音效位，請揀';}
+ S.batch=items;$('sBatch').hidden=false;renderBatch();
+ for(const it of items){if(it.state==='wait')continue;await processItem(it,it.slot);renderBatch();renderTray();await new Promise(r=>setTimeout(r,0));}
+ S.busy=false;
+ const ok=items.filter(i=>i.state==='ok'||i.state==='warn').length,bad=items.filter(i=>i.state==='bad').length,wait=items.filter(i=>i.state==='wait').length;
+ toast('批量完成：成功 '+ok+' / 失敗 '+bad+' / 待指定 '+wait);$('sBatch').scrollIntoView({block:'start'});
+}
+function handleFiles(list){const files=[...list];if(!files.length)return;if(files.length===1)loadFile(files[0]);else runBatch(files);}
+/* ====================== 預設 / 初始化 ====================== */
+function applyPreset(id){
+ const s=slotById(id);
+ $('mix').value='avg';$('gain').value=0;$('normOn').checked=true;$('normDb').value=-1;$('dcOn').checked=true;
+ $('fi').value=s.fi;$('fo').value=s.fo;$('loopOn').checked=s.loop;$('loopMs').value=s.xf;$('curve').value='eq';
+ $('prevLoop').checked=s.loop;updSetSum();
+}
+function slotHint(){
+ const s=slotById(S.slot);
+ $('slotHint').textContent=s.label+'　·　'+(s.loop?'循環播放':'單次播放')+'　·　建議長度 '+s.rec[0]+'~'+s.rec[1]+' 秒　·　'+s.note;
+}
+function loadPrefs(){try{const o=JSON.parse(localStorage.getItem('tank.conv.prefs')||'{}');if(o.cap)$('cap').value=o.cap;if(o.ram!=null&&o.ram!=='')$('ramKb').value=o.ram;}catch(e){}}
+function savePrefs(){try{localStorage.setItem('tank.conv.prefs',JSON.stringify({cap:$('cap').value,ram:$('ramKb').value}));}catch(e){}}
+function init(){
+ const chips=$('chips');
+ for(const s of SLOTS){
+  const l=el('label','chip'),i=document.createElement('input');i.type='radio';i.name='slot';i.value=s.id;i.checked=s.id===S.slot;
+  i.addEventListener('change',()=>{S.slot=s.id;applyPreset(s.id);slotHint();stopPlay();if(S.src){schedule();}else renderOut();});
+  const sp=el('span','',s.label);sp.append(el('i','',''));l.append(i,sp);chips.append(l);
+ }
+ loadPrefs();
+ $('dSet').open=!matchMedia('(max-width:719px)').matches;
+ applyPreset(S.slot);slotHint();
+ $('file').addEventListener('change',e=>{const fl=[...e.target.files];e.target.value='';handleFiles(fl);});
+ const drop=$('drop');
+ ['dragenter','dragover'].forEach(t=>window.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over');}));
+ ['dragleave','drop'].forEach(t=>window.addEventListener(t,e=>{e.preventDefault();if(t==='drop'||e.target===document.documentElement||!e.relatedTarget)drop.classList.remove('over');}));
+ window.addEventListener('drop',e=>{if(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files.length)handleFiles(e.dataTransfer.files);});
+ ['mix','gain','normOn','normDb','dcOn','fi','fo','loopOn','loopMs','curve'].forEach(id=>$(id).addEventListener('change',schedule));
+ $('tA').addEventListener('change',()=>setSel(num('tA',0,0,1e9),S.sel.b));
+ $('tB').addEventListener('change',()=>setSel(S.sel.a,num('tB',0,0,1e9)));
+ $('bFull').addEventListener('click',()=>{if(S.src)setSel(0,S.src.dur);});
+ $('bAuto').addEventListener('click',()=>{if(!S.src)return;if(autoTrim()){syncSel();drawMain();schedule();toast('已去除頭尾靜音');}else toast('搵唔到高過門檻嘅聲音，請調低門檻');});
+ $('bPreset').addEventListener('click',()=>{applyPreset(S.slot);schedule();toast('已還原預設');});
+ $('zIn').addEventListener('click',()=>{if(!S.src)return;const {v0,v1}=S.view,c=(v0+v1)/2,h=(v1-v0)/4;setView(c-h,c+h);});
+ $('zOut').addEventListener('click',()=>{if(!S.src)return;const {v0,v1}=S.view,c=(v0+v1)/2,h=(v1-v0);setView(c-h,c+h);});
+ $('zAll').addEventListener('click',()=>{if(S.src)setView(0,S.src.dur);});
+ $('zSel').addEventListener('click',()=>{if(!S.src)return;const l=S.sel.b-S.sel.a;setView(S.sel.a-l*0.08,S.sel.b+l*0.08);});
+ $('pan').addEventListener('input',e=>{const d=S.src.dur,sp=S.view.v1-S.view.v0;setView(e.target.value/1000*(d-sp),e.target.value/1000*(d-sp)+sp);});
+ $('bPlaySrc').addEventListener('click',playSrc);
+ $('bStop').addEventListener('click',stopPlay);
+ $('bPlayOut').addEventListener('click',playOut);
+ $('prevLoop').addEventListener('change',()=>{if(S.play&&S.play.kind==='out'){stopPlay();playOut();}});
+ $('bSave').addEventListener('click',saveSlot);
+ $('bNext').addEventListener('click',()=>{const n=nextSlot();if(!n){toast('所有音效位都已經有檔');return;}selectSlot(n.id);toast('已揀「'+n.label+'」：載入對應檔案，或者用同一段錄音再剪');});
+ $('bDl').addEventListener('click',()=>{if(S.out&&!S.out.bad)download(S.slot+'.wav',S.out.wav,'audio/wav');});
+ $('bZip').addEventListener('click',()=>{const f=[];for(const s of SLOTS)if(S.slots[s.id])f.push({name:s.id+'.wav',bytes:S.slots[s.id].wav});if(f.length)download('tank_sounds.zip',makeZip(f),'application/zip');});
+ $('bAlign').addEventListener('click',alignLevels);
+ $('bClear').addEventListener('click',()=>{if(!confirm('清除音效包入面全部 '+SLOTS.filter(s=>S.slots[s.id]).length+' 個音效？(下載咗嘅檔案唔受影響)'))return;stopPlay();S.slots={};dbClear();renderTray();if(S.out)run();toast('已清除音效包');});
+ $('bBatchClear').addEventListener('click',()=>{$('sBatch').hidden=true;});
+ $('cap').addEventListener('change',()=>{savePrefs();renderTray();});
+ $('ramKb').addEventListener('change',()=>{savePrefs();renderTray();if(S.out)run();});
+ document.addEventListener('keydown',e=>{
+  if(e.code!=='Space'||e.ctrlKey||e.metaKey||e.altKey||!S.src)return;
+  const t=e.target,tag=(t.tagName||'').toLowerCase();if(['input','textarea','select','button','summary','a'].includes(tag)||t.isContentEditable)return;
+  e.preventDefault();playSrc();
+ });
+ window.addEventListener('resize',()=>{drawMain();drawOut();});
+ if(window.ResizeObserver){const ro=new ResizeObserver(()=>{drawMain();drawOut();});ro.observe($('wave'));ro.observe($('outWave'));}
+ window.addEventListener('error',e=>showErr('發生錯誤：'+e.message));
+ renderTray();renderOut();restore();
+}
+init();
+</script>
+</body>
+</html>
